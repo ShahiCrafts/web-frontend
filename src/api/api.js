@@ -13,13 +13,10 @@ import axios from "axios";
  * @constant
  * @type {import('axios').AxiosInstance}
  */
-const API_URL = import.meta.env.VITE_API_BASE_URL || "localhost:8080/";
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
 const instance = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: API_URL
 });
 
 // Attach auth token to each request if available

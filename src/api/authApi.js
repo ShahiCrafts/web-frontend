@@ -1,4 +1,4 @@
-import axios from './api';
+import instance from "../api/api";
 
 /**
  * Sends a verification code to the user's email or phone number.
@@ -7,7 +7,7 @@ import axios from './api';
  * @returns {Promise<import('axios').AxiosResponse>} Axios response promise.
  */
 export const sendVerificationCode = (data) =>
-  axios.post('/auth/send-verification-code', data);
+  instance.post('/auth/send-verification-code', data);
 
 /**
  * Verifies the OTP or code sent to the user.
@@ -16,7 +16,7 @@ export const sendVerificationCode = (data) =>
  * @returns {Promise<import('axios').AxiosResponse>} Axios response promise.
  */
 export const verifyCode = (data) =>
-  axios.post('/auth/verify-code', data);
+  instance.post('/auth/verify-code', data);
 
 /**
  * Creates a new user account after successful code verification.
@@ -25,7 +25,7 @@ export const verifyCode = (data) =>
  * @returns {Promise<import('axios').AxiosResponse>} Axios response promise.
  */
 export const createAccountAPI = (data) =>
-  axios.post('/auth/register', data);
+  instance.post('/auth/register', data);
 
 /**
  * Authenticates the user with email and password.
@@ -34,5 +34,9 @@ export const createAccountAPI = (data) =>
  * @returns {Promise<import('axios').AxiosResponse>} Axios response promise.
  */
 export const login = (credentials) => {
-    return axios.post('/auth/login', credentials)
+    return instance.post('/auth/login', credentials)
 }
+
+export const logoutUser = () => {
+  return instance.post("/auth/logout");
+};
