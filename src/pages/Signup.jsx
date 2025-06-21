@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import backgroundImage from '../assets/illustration.png';
-import AccountForm from '../components/auth/AccountForm';
-import DetailsForm from '../components/auth/DetailsForm';
-import VerifyOTPForm from '../components/auth/VerfiyOTPForm';
+import AccountForm from '../components/common/auth/AccountForm';
+import DetailsForm from '../components/common/auth/DetailsForm';
+import VerifyOTPForm from '../components/common/auth/VerfiyOTPForm';
 import { sendVerificationCodeService, verifyCodeService } from '../services/authService';
-import useSignupTan from '../hooks/useSignupHook';
+import useSignupTan from '../hooks/useSignupTan';
 import toast from 'react-hot-toast';
 import LoadingOverlay from '../components/common/LoadingOverlay';
 import { useNavigate } from 'react-router-dom';

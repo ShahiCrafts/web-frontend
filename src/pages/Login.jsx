@@ -4,10 +4,11 @@ import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import logo from "../assets/logo.png";
 import toast from "react-hot-toast";
 import backgroundImage from "../assets/illustration.png";
 import { useNavigate } from "react-router-dom";
-import useLoginTan from "../hooks/useLoginHook";
+import useLoginTan from "../hooks/useLoginTan";
 import LoadingOverlay from "../components/common/LoadingOverlay";
 
 export default function Login() {
@@ -37,7 +38,6 @@ export default function Login() {
       email: values.email,
       password: values.password,
     };
-    console.log("Login payload:", payload);
 
     setShowOverlay(true);
 
@@ -47,7 +47,6 @@ export default function Login() {
         toast.success("Login successful!");
         setSubmitting(false);
         setShowOverlay(false);
-        navigate("/dashboard");
       },
       onError: (error) => {
         toast.error(error.message || "Login failed");
@@ -60,15 +59,16 @@ export default function Login() {
   return (
     <div className="flex justify-center items-center w-[90%] h-[100vh] mx-auto relative">
       <div className="flex flex-col lg:flex-row w-full max-w-4xl shadow-lg rounded-2xl overflow-hidden">
-        {/* Left side image */}
         <div
           className="hidden lg:block lg:w-1/2 bg-cover bg-center"
           style={{ backgroundImage: `url(${backgroundImage})` }}
-          aria-hidden="true"
         />
 
-        {/* Right side login form */}
         <div className="w-full lg:w-1/2 px-6 py-8 lg:px-12 lg:py-10 md:px-8 md:py-24 flex flex-col justify-center min-h-[550px]">
+          <div className="lg:hidden flex flex-col items-center justify-center mb-6">
+            <img src={logo} alt="OnGo Desk Logo" className="w-12 h-12 mb-2" />
+            <h1 className="text-xl font-semibold text-gray-800">OnGo Desk</h1>
+          </div>
           <h2 className="text-lg sm:text-xl font-bold mb-1.5">Welcome back!</h2>
           <p className="text-gray-500 mb-5 text-sm">
             Login to your account to continue
@@ -81,7 +81,6 @@ export default function Login() {
           >
             {({ isSubmitting, isValid, dirty }) => (
               <Form noValidate>
-                {/* Email */}
                 <div className="mb-4 text-left">
                   <label
                     htmlFor="email"
@@ -104,7 +103,6 @@ export default function Login() {
                   />
                 </div>
 
-                {/* Password */}
                 <div className="mb-4 text-left relative">
                   <label
                     htmlFor="password"
@@ -138,7 +136,6 @@ export default function Login() {
                   />
                 </div>
 
-                {/* Remember me + Forgot password */}
                 <div className="flex items-center justify-between mb-5">
                   <label className="flex items-center text-sm text-gray-700 cursor-pointer select-none">
                     <Field
@@ -159,7 +156,6 @@ export default function Login() {
                   </button>
                 </div>
 
-                {/* Submit button */}
                 <button
                   type="submit"
                   disabled={isSubmitting || !isValid || !dirty}
@@ -171,7 +167,6 @@ export default function Login() {
             )}
           </Formik>
 
-          {/* Divider */}
           <div className="flex items-center my-4">
             <hr className="flex-grow border-gray-300" />
             <span className="px-3 text-gray-500 text-sm whitespace-nowrap">
@@ -180,7 +175,6 @@ export default function Login() {
             <hr className="flex-grow border-gray-300" />
           </div>
 
-          {/* Social login */}
           <div className="flex flex-row justify-center sm:justify-start space-x-4 mb-5 w-full">
             <button
               type="button"
@@ -200,7 +194,6 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Signup link */}
           <p className="text-sm text-center text-gray-700">
             Don't have an account?{" "}
             <span
@@ -212,7 +205,6 @@ export default function Login() {
           </p>
         </div>
       </div>
-
       {(loginMutation.isLoading || showOverlay) && <LoadingOverlay />}
     </div>
   );
