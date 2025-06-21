@@ -2,7 +2,8 @@ import {
   sendVerificationCode,
   verifyCode,
   createAccountAPI,
-  login
+  login,
+  logoutUser
 } from "../api/authApi";
 
 /**
@@ -69,5 +70,14 @@ export const loginUserService = async (credentials) => {
     return response.data;
   } catch (err) {
     throw err.response?.data || { message: "Login failed" };
+  }
+};
+
+export const logoutUserService = async () => {
+  try {
+    const response = await logoutUser();
+    return response.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Logout failed on the server" };
   }
 };
