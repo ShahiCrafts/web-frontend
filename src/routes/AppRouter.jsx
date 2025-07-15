@@ -6,24 +6,47 @@ import Signup from "../pages/Signup";
 import Login from "../pages/Login";
 import AdminLayout from "../components/layouts/AdminLayout";
 
+import PublicLayout from "../components/layouts/PublicLayout";
+
 import DashboardPage from "../pages/dashboard/DashboardPage";
-import UserDirectory from "../pages/dashboard/UserDirectoryPage";
 import IssueManagementPage from "../pages/dashboard/IssueManagementPage";
-import FlaggedContentPage from "../pages/dashboard/FlaggedContentPage";
 import EventsPage from "../pages/dashboard/EventsPage";
 
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import AnnouncementsPage from "../components/admin/AnnouncementsPage";
+import MainContentPage from "../components/admin/contents/MainContentPage";
+import MainUsersPage from "../components/admin/users/MainUsersPage";
+import MainNotificationPage from "../components/admin/notifications/MainNotificationPage";
+import MainEventPage from "../components/admin/events/MainEventPage";
+import MainDiscussionPage from "../components/admin/discussions/MainDiscussionPage";
+import MainRolePage from "../components/admin/permissions/MainRolePage";
+import MainPollPage from "../components/admin/polls/MainPollPage";
+import Settings from "../components/admin/Settings";
+import MainTenantPage from "../components/admin/tenants/MainTenantPage";
+import MainCatAndTag from "../components/admin/categories/MainCatAndTag";
+import MainHomePage from "../components/public/home/MainHomePage";
+import DiscussionPage from "../pages/DiscussionPage";
+import PostDetailPage from "../pages/PostDetailModal";
+import ProfilePage from "../pages/profile/UserProfilePage";
+import SarahChenProfile from "../pages/ExplorePage";
+import ExploreCommunities from "../pages/ExploreCommunities";
+import CommunityApprovalDashboard from "../components/admin/CommunityManagement";
+import ManageCommunities from "../pages/ManageCommunities";
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/citizen/discussion/:id"
+          element={
+            <ProtectedRoute allowedRoles={["citizen"]}>
+              <DiscussionPage />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Protected Admin Routes */}
         <Route
           path="/admin/*"
           element={
@@ -32,17 +55,40 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="users" element={<UserDirectory />} />
+          <Route index element={<Navigate to="/admin/overview" replace />} />
+          <Route path="overview" element={<DashboardPage />} />
+          <Route path="users/*" element={<MainUsersPage />} />
           <Route path="issues" element={<IssueManagementPage />} />
-          <Route path="flags" element={<FlaggedContentPage />} />
-          <Route path="announcements" element={<AnnouncementsPage />} />
-          <Route path="events" element={<EventsPage />} />
-          {/* Add more admin nested routes here */}
+          <Route path="flags" element={<MainContentPage />} />
+          <Route path="notifications" element={<MainNotificationPage />} />
+          <Route path="discussions" element={<MainDiscussionPage />} />
+          <Route path="roles" element={<MainRolePage />} />
+          <Route path="polls" element={<MainPollPage />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="tenants" element={<MainTenantPage />} />
+          <Route path="categories" element={<MainCatAndTag />} />
+          <Route path="events" element={<MainEventPage />} />
+          <Route path="communities" element={<CommunityApprovalDashboard />} />
+
         </Route>
 
-        {/* Fallback Route */}
+        <Route
+          path="/citizen/*"
+          element={
+            <ProtectedRoute allowedRoles={["citizen"]}>
+              <PublicLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/citizen/home" replace />} />
+          <Route path="home" element={<MainHomePage />} />
+          <Route path="post/options/:postId" element={<PostDetailPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/:userId" element={<SarahChenProfile />} />
+          <Route path="explore" element={<ExploreCommunities />} />
+          <Route path="manage" element={<ManageCommunities />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
