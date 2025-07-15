@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import AdminHeader from "../admin/AdminHeader";
-import AdminSidebar from "../admin/AdminSidebar";
+import AdminHeader from "../admin/common/AdminHeader";
+import AdminSidebar from "../admin/common/AdminSidebar";
 import { Outlet } from "react-router-dom";
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-white flex flex-col">
       <AdminHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex flex-1 overflow-hidden">
