@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { loginUserService, logoutUserService } from "../services/authService";
 import { useContext } from "react";
-import { AuthContext } from "../auth/AuthProvider";
+import { AuthContext } from "../context/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { roleRoutes } from "../utils/roleRoutes";
 
