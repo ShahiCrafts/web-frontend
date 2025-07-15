@@ -1,36 +1,33 @@
-import axios from "axios";
+import axios from 'axios';
 
-/**
- * Axios instance configured with a base API URL and default headers.
- * 
- * The base URL is taken from the environment variable `VITE_API_BASE_URL`.
- * If the environment variable is not defined, it falls back to 
- * `'localhost:8080/api'`.
- * 
- * This instance can be used throughout the application to make HTTP 
- * requests with consistent configuration.
- * 
- * @constant
- * @type {import('axios').AxiosInstance}
- */
-const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
-
-const instance = axios.create({
-    baseURL: API_URL
-});
-
-// Attach auth token to each request if available
-instance.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
+// Get the token from localStorage. In a real app, this might be more complex.
 const getAuthToken = () => {
-  const token = localStorage.getItem('token')
-  return token;
-}
+  return localStorage.getItem('token');
+};
 
-export default instance;
+// Create an Axios instance with the backend base URL.
+// Using VITE_API_BASE_URL from .env is a good practice for production.
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+});
+
+// --- Axios Request Interceptor ---
+// This function will run before every request made with this 'api' instance.
+api.interceptors.request.use(
+  (config) => {
+    const token = getAuthToken();
+    
+    // If a token exists, add it to the Authorization header for the outgoing request.
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    // Handle any errors that occur during the request setup.
+    return Promise.reject(error);
+  }
+);
+
+export default api;
