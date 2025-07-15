@@ -1,8 +1,8 @@
-import DashboardCard from "../../components/admin/DashboardCard";
-import HeatMapCard from "../../components/admin/HeatMapCard";
-import RevenueCard from "../../components/admin/RevenueCard";
-import StatisticsCard from "../../components/admin/StatisticsCard";
-import UserAccounts from "../../components/admin/UserAccounts";
+import DashboardCard from "../../components/admin/overview/AnalyticsCard";
+import HeatMapCard from "../../components/admin/overview/HeatMapCard";
+import RevenueCard from "../../components/admin/overview/RevenueCard";
+import StatisticsCard from "../../components/admin/overview/StatisticsCard";
+import UserAccounts from "../../components/admin/overview/UsersTable";
 
 
 export default function DashboardPage() {

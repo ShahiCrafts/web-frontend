@@ -1,7 +1,7 @@
 import React from "react";
-import EventsTable from "../../components/admin/EventsTable";
+import EventsTable from "../../components/admin/events/EventsTable";
 
-export default function UserDirectory() {
+export default function EventsPage() {
   return (
     <div>
       <EventsTable />
