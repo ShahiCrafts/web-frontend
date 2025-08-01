@@ -9,17 +9,12 @@ import {
   Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
 
-// Removed direct import of castVoteService here
-// import { castVoteService } from '../../../services/user/postService';
-
-// Import useSocket for onlineUsers, and useAuth for currentUser
+// Import the necessary hooks
 import { useSocket } from '../../../context/SocketProvider';
 import { useAuth } from '../../../context/AuthProvider';
-
-// Import the useCastVote hook from your TanStack Query hooks
-import { useCastVote } from '../../../hooks/user/usePostTan';
-
+import { useCastVote } from '../../../hooks/user/usePostTan'; // Make sure this path is correct
 
 const getInitials = (name) => {
   if (!name) return 'U';
@@ -29,106 +24,70 @@ const getInitials = (name) => {
 
 export default function PollPostCard({ post = {} }) {
   const { user: currentUser } = useAuth();
-  const { socket, onlineUsers } = useSocket(); // Get onlineUsers from useSocket
-
-  // Initialize the castVote mutation hook
-  const castVoteMutation = useCastVote();
+  const { onlineUsers } = useSocket();
 
   const {
     _id: postId,
-    authorId = {}, // This will be the populated author object from backend
+    authorId = {},
     community,
     question,
     content,
-    // options and votedUsers will now come directly from the `post` prop
-    // as it's updated by TanStack Query
-    options: currentOptions = [], // Renamed to avoid conflict with local state for now
+    options: currentOptions = [],
     allowComments = true,
     pollEndsAt,
     notifyOnClose,
     createdAt,
-    votedUsers: currentVotedUsers = [], // Renamed for clarity
+    votedUsers: currentVotedUsers = [],
+    allowMultipleSelections,
   } = post;
 
-  const [selectedOptionLabel, setSelectedOptionLabel] = useState(null);
-  const [isVoting, setIsVoting] = useState(false); 
-  
-  const options = currentOptions;
-  const hasVoted = currentUser && currentVotedUsers.includes(currentUser.id);
+  const [hasVoted, setHasVoted] = useState(
+    currentUser && currentVotedUsers.includes(currentUser.id)
+  );
+
+  const { mutate: castVote, isLoading: isVoting } = useCastVote();
+
+  // Determine if the poll has ended
+  const isPollClosed = pollEndsAt ? new Date(pollEndsAt) < new Date() : false;
+
+  const handleVote = (optionIndex) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to vote.");
+      return;
+    }
+    if (hasVoted && !allowMultipleSelections) {
+      toast("You have already voted on this poll.", { icon: 'ℹ️' });
+      return;
+    }
+
+    castVote({ postId, optionIndex });
+    // Optimistically update the local state to show results immediately
+    setHasVoted(true);
+  };
 
   const authorUserId = authorId?._id?.toString();
   const isAuthorOnline = authorUserId && onlineUsers?.includes(authorUserId) || false;
 
-  const totalVotes = options.reduce((sum, o) => sum + (o.votes || 0), 0);
-
-  const handleVote = async () => {
-    if (!currentUser) {
-      toast.error("Please log in to cast your vote.");
-      return;
-    }
-    if (!selectedOptionLabel) {
-      toast.error("Please select an option to vote.");
-      return;
-    }
-    // These checks are for immediate UX feedback. Backend will perform definitive validation.
-    if (hasVoted) {
-      toast.error("You have already voted in this poll.");
-      return;
-    }
-    if (getPollDuration() === 'Closed') {
-      toast.error("This poll is closed and cannot receive more votes.");
-      return;
-    }
-    if (isVoting) { // Prevent double clicks
-      return;
-    }
-
-    setIsVoting(true);
-
-    try {
-      // Call the TanStack Query mutation
-      await castVoteMutation.mutateAsync({ pollId: postId, optionLabel: selectedOptionLabel });
-
-      toast.success('Vote cast successfully!');
-      // IMPORTANT: No manual `setOptions` or `setHasVoted` here.
-      // TanStack Query's `onSuccess` and Socket.IO handler will update the cache,
-      // which in turn updates the `post` prop, causing a re-render.
-
-    } catch (error) {
-      console.error('Error casting vote:', error);
-      // `error.message` comes from the service layer's error handling
-      toast.error(error.message || 'Failed to cast vote. Please try again.');
-    } finally {
-      setIsVoting(false);
-      setSelectedOptionLabel(null); // Clear selected option after the attempt
-    }
-  };
+  const totalVotes = currentOptions.reduce((sum, o) => sum + (o.votes || 0), 0);
 
   const getPollDuration = () => {
-    if (!pollEndsAt) return 'N/A';
+    if (isPollClosed) return 'Closed';
     const ends = new Date(pollEndsAt);
     const now = new Date();
     const diffMs = ends - now;
     if (diffMs <= 0) return 'Closed';
 
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    let durationString = '';
-    if (days > 0) durationString += `${days}d `;
-    if (hours > 0) durationString += `${hours}h `;
-    if (minutes > 0) durationString += `${minutes}m`;
-
-    return durationString.trim() || '<1m';
+    return formatDistanceToNow(ends, { addSuffix: true });
   };
 
   const formattedDate = createdAt
-    ? new Date(createdAt).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
+    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true })
     : 'a few moments ago';
+
+  // Use a ref or local state to track the user's specific vote for optimistic UI
+  // This is a simple approach since the backend schema doesn't store this.
+  // A more robust solution would involve a custom schema.
+  // We'll just check if the user has voted and render the results, as planned.
 
   return (
     <article className="bg-white font-sans border border-gray-200 rounded-2xl w-full max-w-2xl mx-auto shadow-sm hover:shadow-lg relative overflow-hidden transition-all duration-300 transform hover:-translate-y-1 group">
@@ -140,9 +99,9 @@ export default function PollPostCard({ post = {} }) {
       {/* Header */}
       <header className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-gray-100">
         <div className="relative group/avatar">
-          {authorId.avatar ? (
+          {authorId.profileImage ? (
             <img
-              src={authorId.avatar}
+              src={authorId.profileImage}
               alt={authorId.fullName || 'User Avatar'}
               className="w-10 h-10 rounded-full object-cover border border-gray-200 transition-all duration-300 group-hover/avatar:scale-110 group-hover/avatar:shadow-md"
             />
@@ -192,17 +151,14 @@ export default function PollPostCard({ post = {} }) {
         )}
       </div>
 
-      {/* Poll Options */}
+      {/* Poll Options - Conditional Rendering */}
       <div className="px-6 pb-5 space-y-3">
-        {options.map((option, idx) => {
-          const percentage = option.percentage !== undefined
-            ? option.percentage
-            : (totalVotes === 0 ? 0 : Math.round((option.votes || 0) / totalVotes * 100));
+        {hasVoted || isPollClosed ? (
+          // Show results if user has voted or poll is closed
+          currentOptions.map((option, idx) => {
+            const percentage = totalVotes === 0 ? 0 : (option.votes / totalVotes) * 100;
+            const isUserVotedForThisOption = currentUser && currentVotedUsers.includes(currentUser.id) && option.votes === currentOptions[idx].votes; // Simple check, may not be 100% accurate without server-side vote tracking per option
 
-          const isSelected = selectedOptionLabel === option.label;
-
-          // Display results if hasVoted or poll is closed
-          if (hasVoted || getPollDuration() === 'Closed') {
             return (
               <div
                 key={idx}
@@ -213,19 +169,19 @@ export default function PollPostCard({ post = {} }) {
               >
                 <div
                   className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out ${
-                    isSelected
-                       ? 'bg-gradient-to-r from-orange-300 to-red-300'
-                       : 'bg-gradient-to-r from-gray-300 to-gray-400'
+                    isUserVotedForThisOption 
+                      ? 'bg-gradient-to-r from-orange-300 to-red-300'
+                      : 'bg-gradient-to-r from-gray-300 to-gray-400'
                   }`}
                   style={{
-                     width: `${percentage}%`,
+                    width: `${percentage}%`,
                     animation: `expandWidth 1s ease-out 0.3s both`
                   }}
                 />
                 <div className="relative z-10 flex justify-between items-center px-4 py-3 text-sm font-medium text-gray-800">
                   <span className="flex items-center gap-2">
                     {option.label}
-                    {isSelected && (
+                    {isUserVotedForThisOption && (
                       <Check
                         className="text-[#ff5c00] animate-bounce"
                         size={16}
@@ -241,41 +197,27 @@ export default function PollPostCard({ post = {} }) {
                 </div>
               </div>
             );
-          }
-          // Display interactive options if not voted and poll is open
-          return (
-            <label
+          })
+        ) : (
+          // Show voting buttons if user hasn't voted and poll is open
+          currentOptions.map((option, idx) => (
+            <button
               key={idx}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md ${
-                isSelected
-                  ? 'bg-gradient-to-r from-orange-50 to-red-50 border-[#ff5c00] shadow-lg shadow-orange-100'
-                  : 'bg-white border-gray-200 hover:border-gray-400 hover:bg-gray-50'
-              }`}
-              style={{
-                animation: `fadeInUp 0.4s ease-out ${idx * 0.1}s both`
-              }}
+              onClick={() => handleVote(idx)}
+              className="w-full relative bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 text-left cursor-pointer transition-all duration-300 hover:bg-gray-100 hover:shadow-md transform hover:scale-[1.02]"
+              disabled={isVoting}
             >
-              <input
-                type="radio"
-                name="poll-option"
-                value={option.label}
-                checked={isSelected}
-                onChange={() => setSelectedOptionLabel(option.label)}
-                className="w-4 h-4 accent-[#ff5c00] transition-transform duration-200 hover:scale-110"
-              />
-              <span className="text-gray-800 font-medium transition-colors duration-200">
-                {option.label}
-              </span>
-            </label>
-          );
-        })}
+              {isVoting ? 'Voting...' : option.label}
+            </button>
+          ))
+        )}
       </div>
 
       {/* Poll Info */}
       <div className="flex justify-between items-center text-sm text-gray-500 px-6 pb-4">
         <div className="flex items-center gap-2 transition-colors duration-200 hover:text-gray-700">
           <Clock size={16} className="transition-transform duration-200 hover:rotate-12" />
-          <span>Closes in {getPollDuration()}</span>
+          <span>{isPollClosed ? 'Closed' : `Closes ${getPollDuration()}`}</span>
         </div>
         <span className="transition-colors duration-200 hover:text-gray-700">
           {totalVotes} votes
@@ -298,22 +240,6 @@ export default function PollPostCard({ post = {} }) {
         <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-all duration-200 transform hover:scale-105">
           <Upload className="w-5 h-5 transition-transform duration-200 hover:scale-110 hover:rotate-12" />
           Share
-        </button>
-        <button
-          onClick={handleVote}
-          disabled={!currentUser || !selectedOptionLabel || hasVoted || isVoting || getPollDuration() === 'Closed'}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all duration-300 transform hover:scale-105 ${
-            !currentUser || !selectedOptionLabel || hasVoted || isVoting || getPollDuration() === 'Closed'
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl'
-          }`}
-        >
-          <UserPlus
-            className={`w-4 h-4 transition-transform duration-200 ${
-              isVoting ? 'animate-spin' : 'hover:scale-110'
-            }`}
-          />
-          {getPollDuration() === 'Closed' ? 'Poll Closed' : (isVoting ? 'Casting...' : 'Cast Vote')}
         </button>
       </footer>
 

@@ -32,3 +32,25 @@ export const useDeleteUser = () => {
   });
 };
 
+export const useToggleUserBanStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId) => adminUserService.toggleUserBanStatusService(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['users']);
+      queryClient.invalidateQueries(['admin', 'userEngagementAnalytics']);
+    },
+    onError: (error) => {
+      console.error('Failed to toggle user ban status:', error);
+    },
+  });
+};
+
+export const useUserEngagementAnalytics = () => {
+  return useQuery({
+    queryKey: ['admin', 'userEngagementAnalytics'],
+    queryFn: () => adminUserService.fetchUserEngagementAnalyticsService(),
+    staleTime: 1000 * 60 * 10,
+  });
+};

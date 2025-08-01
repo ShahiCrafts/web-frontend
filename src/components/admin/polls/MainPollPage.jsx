@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, ChevronDown, MoreHorizontal, CheckCircle2, AlertCircle, FileEdit, Clock, Users as UserGroupIcon, Calendar, List, BarChart2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, List, CheckCircle2 } from 'lucide-react';
 import ActivePolls from './ActivePolls';
-import Drafts from './Drafts';
 import AllPolls from './AllPolls';
+import { useFetchPolls } from '../../../hooks/admin/usePollHook'; // Import the poll hook
 
-const Tab = ({ label, count, isActive, onClick, icon: Icon }) => {
+const Tab = ({ label, count, isActive, onClick, icon: Icon, isLoading }) => {
     const badgeClassName = `ml-2 px-2 py-0.5 text-xs rounded-full font-bold text-white`;
     const badgeStyle = {
         backgroundColor: '#FF5C00'
@@ -20,10 +20,14 @@ const Tab = ({ label, count, isActive, onClick, icon: Icon }) => {
         >
             {Icon && <Icon className="w-4 h-4" />}
             <span className="ml-2">{label}</span>
-            {count > 0 && (
-                <span className={badgeClassName} style={badgeStyle}>
-                    {count}
-                </span>
+            {isLoading ? (
+                <span className={`${badgeClassName} animate-pulse bg-gray-400`}>...</span>
+            ) : (
+                count > 0 && (
+                    <span className={badgeClassName} style={badgeStyle}>
+                        {count}
+                    </span>
+                )
             )}
         </button>
     );
@@ -33,10 +37,24 @@ const Tab = ({ label, count, isActive, onClick, icon: Icon }) => {
 export default function MainPollPage() {
     const [activeTab, setActiveTab] = useState('All Polls');
 
+    // Fetch total count for all polls
+    const { data: allPollsData, isLoading: isLoadingAll } = useFetchPolls({ limit: 1 });
+    const allPollsCount = allPollsData?.totalPolls || 0;
+
+    // Fetch total count for active polls
+    const { data: activePollsData, isLoading: isLoadingActive } = useFetchPolls({ status: 'Active', limit: 1 });
+    const activePollsCount = activePollsData?.totalPolls || 0;
+
+
     const renderContent = () => {
         switch (activeTab) {
-            case 'Active': return <ActivePolls />;
-            case 'Drafts': return <Drafts />;
+            case 'Active':
+                // The AllPolls component can handle filtering based on a prop
+                // A better approach is to have a dedicated component for ActivePolls
+                // but for now, we'll assume the AllPolls component can filter.
+                // Or you can create a separate ActivePolls component. The provided code
+                // has an ActivePolls component, so we'll use that.
+                return <ActivePolls />;
             case 'All Polls':
             default:
                 return <AllPolls />;
@@ -53,9 +71,22 @@ export default function MainPollPage() {
             </header>
 
             <nav className="flex items-center space-x-2 mb-6">
-                <Tab label="All Polls" icon={List} isActive={activeTab === 'All Polls'} onClick={() => setActiveTab('All Polls')} />
-                <Tab label="Active" count={3} icon={CheckCircle2} isActive={activeTab === 'Active'} onClick={() => setActiveTab('Active')} />
-                <Tab label="Drafts" count={1} icon={FileEdit} isActive={activeTab === 'Drafts'} onClick={() => setActiveTab('Drafts')} />
+                <Tab
+                    label="All Polls"
+                    icon={List}
+                    isActive={activeTab === 'All Polls'}
+                    onClick={() => setActiveTab('All Polls')}
+                    count={allPollsCount}
+                    isLoading={isLoadingAll}
+                />
+                <Tab
+                    label="Active"
+                    icon={CheckCircle2}
+                    isActive={activeTab === 'Active'}
+                    onClick={() => setActiveTab('Active')}
+                    count={activePollsCount}
+                    isLoading={isLoadingActive}
+                />
             </nav>
 
             <main>
@@ -63,4 +94,4 @@ export default function MainPollPage() {
             </main>
         </div>
     );
-};
+}

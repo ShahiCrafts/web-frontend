@@ -1,258 +1,168 @@
-import React, { useState, useEffect } from "react";
-import { ArrowUpRight, ArrowDownRight, MoreHorizontal, TrendingUp, TrendingDown, Activity, Users, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, MoreHorizontal } from "lucide-react";
+import { useDashboardSummary } from "../../../hooks/admin/useDashboardAnalyticsHook"; // Ensure this path is correct
 
-function MetricBox({ title, tag, count, change, isPositive, isFirst, icon, color, delay = 0 }) {
-  const [animatedCount, setAnimatedCount] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
+// Helper function for formatting numbers (e.g., 12345 to "12.35k" or "12,345")
+const formatCount = (num) => {
+  // Return "N/A" if the number is null or undefined
+  if (num === null || num === undefined) return "N/A";
+  // If it's not a number (e.g., already a formatted string), return it as is
+  if (typeof num !== 'number') return String(num);
 
-  // Animate count on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const numericCount = typeof count === 'string' ? parseInt(count.replace(/[^0-9]/g, '')) : count;
-      const increment = numericCount / 30;
-      let current = 0;
-      
-      const interval = setInterval(() => {
-        current += increment;
-        if (current >= numericCount) {
-          setAnimatedCount(numericCount);
-          clearInterval(interval);
-        } else {
-          setAnimatedCount(Math.floor(current));
-        }
-      }, 50);
-      
-      return () => clearInterval(interval);
-    }, delay);
+  // Format numbers greater than or equal to 1 million with "M" suffix
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(2) + "M";
+  }
+  // Format numbers greater than or equal to 1 thousand with "k" suffix
+  if (num >= 1000) {
+    return (num / 1000).toFixed(2) + "k";
+  }
+  // For smaller numbers (including 0), use locale-specific formatting (e.g., adds commas)
+  return num.toLocaleString();
+};
 
-    return () => clearTimeout(timer);
-  }, [count, delay]);
 
-  const formatCount = (num) => {
-    if (typeof count === 'string' && count.includes('k')) {
-      return `${(num / 1000).toFixed(1)}k`;
-    }
-    return num.toString();
-  };
+/**
+ * MetricBox component displays a single metric with its title, tag, count,
+ * and an optional change percentage with an arrow indicator.
+ * @param {object} props - Component props.
+ * @param {string} props.title - The main title of the metric.
+ * @param {string} props.tag - A descriptive tag for the metric.
+ * @param {string|number} props.count - The numerical value of the metric.
+ * @param {number|null} props.change - The percentage change, or null if not applicable.
+ * @param {boolean} props.isPositive - True if the change is positive, false otherwise.
+ * @param {boolean} props.isFirst - True if this is the first MetricBox in a series, used for styling.
+ */
+function MetricBox({ title, tag, count, change, isPositive, isFirst }) {
+  // Format the change percentage, ensuring it's a number before Math.abs
+  const displayChange = typeof change === 'number' ? Math.abs(change).toFixed(1) : 'N/A';
+  // Determine text color based on whether the change is positive or negative
+  const changeColor = isPositive ? "text-green-500" : "text-red-500";
 
-  const changeColor = isPositive ? "text-emerald-500" : "text-red-500";
-  const changeBgColor = isPositive ? "bg-emerald-50" : "bg-red-50";
-  const iconBgColor = isPositive ? "bg-emerald-100" : "bg-red-100";
+  // Apply specific padding classes for the first metric box to adjust layout
+  const paddingClasses = isFirst
+    ? "px-0 py-2 lg:py-0 lg:pl-0 lg:pr-8"
+    : "px-0 py-2 lg:py-0 lg:px-8";
 
   return (
-    <div 
-      className={`w-full group cursor-pointer transition-all duration-300 ${
-        isFirst ? "px-0 py-4 lg:py-0 lg:pl-0 lg:pr-8" : "px-0 py-4 lg:py-0 lg:px-8"
-      } ${isHovered ? 'transform scale-105' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="relative overflow-hidden">        
-        {/* Header section */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${iconBgColor} transition-all duration-300 group-hover:scale-110`}>
-              {React.cloneElement(icon, { size: 16, className: `${isPositive ? 'text-emerald-600' : 'text-red-600'}` })}
-            </div>
-            <div>
-              <h3 className="text-sm text-gray-700 font-semibold mb-1 group-hover:text-gray-900 transition-colors">
-                {title}
-              </h3>
-              <p className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full inline-block">
-                {tag}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className={`w-full ${paddingClasses}`}>
+      <h3 className="text-sm text-gray-500 font-medium mb-1">{title}</h3>
+      <p className="text-xs text-gray-400 mb-2">{tag}</p>
 
-        {/* Metrics section */}
-        <div className="flex justify-between items-end">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold text-gray-900 transition-all duration-300">
-              {formatCount(animatedCount)}
-            </p>
-            <div className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`}></div>
-              <span className="text-xs text-gray-500 font-medium">
-                {isPositive ? 'Trending up' : 'Trending down'}
-              </span>
-            </div>
+      <div className="flex justify-between items-baseline">
+        <p className="text-xl font-semibold text-gray-800">{count}</p>
+        {/* Conditionally render the change percentage and icon if 'change' is a valid number */}
+        {typeof change === 'number' ? (
+          <div className={`flex items-center gap-x-1 text-[15px] font-semibold ${changeColor}`}>
+            <span>{displayChange}%</span>
+            {isPositive ? (
+              <ArrowUpRight className="h-5 w-5" />
+            ) : (
+              <ArrowDownRight className="h-5 w-5" />
+            )}
           </div>
-          
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${changeBgColor} transition-all duration-300 group-hover:shadow-md`}>
-            <span className={`text-sm font-bold ${changeColor}`}>
-              {isPositive ? '+' : ''}{change}%
-            </span>
-            <div className={`p-0.5 rounded-full ${isPositive ? 'bg-emerald-200' : 'bg-red-200'}`}>
-              {isPositive ? (
-                <ArrowUpRight className={`h-3 w-3 ${changeColor}`} />
-              ) : (
-                <ArrowDownRight className={`h-3 w-3 ${changeColor}`} />
-              )}
-            </div>
+        ) : (
+          // Render "N/A" and a horizontal ellipsis icon if change is not applicable
+          <div className="flex items-center gap-x-1 text-[15px] font-semibold text-gray-500">
+            <span>N/A</span>
+            <MoreHorizontal className="h-5 w-5" />
           </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-          <div 
-            className={`h-full bg-gradient-to-r ${color} transition-all duration-1000 ease-out`}
-            style={{ 
-              width: `${Math.min(Math.abs(change) * 10, 100)}%`,
-              animationDelay: `${delay}ms`
-            }}
-          ></div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default function AnalyticsCard() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+/**
+ * DashboardCard component displays a summary of key performance metrics
+ * for the admin dashboard, fetching data using TanStack Query.
+ */
+export default function DashboardCard() {
+  const { data: summaryData, isLoading, isError, error } = useDashboardSummary();
+
+  // IMPORTANT: Ensure summaryData.data is accessed correctly, as per previous debugging
+  // Your backend now returns data in summaryData.data.issues and summaryData.data.users
+  const issuesData = summaryData?.issues || {}; // Corrected access
+  const usersData = summaryData?.users || {};   // Corrected access
 
   const metrics = [
     {
-      title: "Issues Reported",
-      tag: "All Time",
-      count: "1.24k",
-      change: 5.4,
-      isPositive: true,
-      icon: <AlertCircle />,
-      color: "from-blue-500 to-cyan-500"
+      title: "Total Reported Issues",
+      tag: "Overall",
+      count: formatCount(issuesData.totalReported ?? 0),
+      // Use the new reportedGrowthRate from the backend
+      change: issuesData.reportedGrowthRate ? parseFloat(issuesData.reportedGrowthRate) : null,
+      // Determine positivity based on the reportedGrowthRate
+      isPositive: issuesData.reportedGrowthRate ? parseFloat(issuesData.reportedGrowthRate) > 0 : true,
     },
     {
       title: "Issues Resolved",
-      tag: "This Month",
-      count: 120,
-      change: -2.1,
-      isPositive: false,
-      icon: <CheckCircle />,
-      color: "from-green-500 to-emerald-500"
+      tag: "Overall",
+      count: formatCount(issuesData.resolved ?? 0),
+      // Use the new resolvedGrowthRate from the backend
+      change: issuesData.resolvedGrowthRate ? parseFloat(issuesData.resolvedGrowthRate) : null,
+      // Determine positivity based on the resolvedGrowthRate
+      isPositive: issuesData.resolvedGrowthRate ? parseFloat(issuesData.resolvedGrowthRate) > 0 : true,
     },
     {
-      title: "Active Users",
-      tag: "Online Now",
-      count: "456",
-      change: 1.2,
-      isPositive: true,
-      icon: <Users />,
-      color: "from-purple-500 to-violet-500"
+      title: "Total Users",
+      tag: "Overall",
+      count: formatCount(usersData.totalUsers ?? 0),
+      change: usersData.growthRate ? parseFloat(usersData.growthRate) : null,
+      isPositive: usersData.growthRate ? parseFloat(usersData.growthRate) > 0 : true,
     },
-  ];
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: <Activity size={14} /> },
-    { id: 'trends', label: 'Trends', icon: <TrendingUp size={14} /> },
   ];
 
   if (isLoading) {
     return (
-      <div className="bg-white/80 backdrop-blur-sm px-6 py-6 rounded-2xl shadow-lg border border-gray-200/50 w-full mx-auto">
-        <div className="animate-pulse">
-          <div className="flex justify-between items-start mb-6">
-            <div className="space-y-2">
-              <div className="h-5 bg-gray-200 rounded w-48"></div>
-              <div className="h-4 bg-gray-200 rounded w-64"></div>
-            </div>
-            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-          </div>
-          <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200/80">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-1 px-0 py-4 lg:py-0 lg:px-8">
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-32"></div>
-                  <div className="h-8 bg-gray-200 rounded w-20"></div>
-                  <div className="h-2 bg-gray-200 rounded w-full"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="bg-white px-5 py-5 rounded-xl shadow-md w-full mx-auto animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-6"></div>
+        <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200/80">
+          <div className="w-full h-20 bg-gray-200 rounded-lg px-0 py-2 lg:py-0 lg:pl-0 lg:pr-8"></div>
+          <div className="w-full h-20 bg-gray-200 rounded-lg px-0 py-2 lg:py-0 lg:px-8"></div>
+          <div className="w-full h-20 bg-gray-200 rounded-lg px-0 py-2 lg:py-0 lg:px-8"></div>
         </div>
       </div>
     );
   }
 
+  if (isError) {
+    return (
+      <div className="bg-white px-5 py-5 rounded-xl shadow-md w-full mx-auto text-red-600">
+        <h2 className="text-base font-semibold mb-2">Error Loading Dashboard</h2>
+        <p className="text-sm">Failed to load performance summary: {error?.message || 'Unknown error'}</p>
+        <p className="text-xs text-gray-500 mt-2">Please try refreshing the page.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white/80 backdrop-blur-sm px-6 py-6 rounded-2xl shadow-lg border border-gray-200/50 w-full mx-auto hover:shadow-xl transition-all duration-300 group">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-purple-500/10">
-              <Activity className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 group-hover:text-gray-800 transition-colors">
-                Performance Dashboard
-              </h2>
-              <p className="text-sm text-gray-600">
-                Real-time metrics and key performance indicators
-              </p>
-            </div>
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex gap-2 mt-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-orange-500 to-purple-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
+    <div className="bg-white px-5 py-5 rounded-xl shadow-md w-full mx-auto">
+      <div className="flex justify-between items-start mb-4 md:mb-6">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800 mb-1">Performance Summary</h2>
+          <p className="text-sm text-gray-500">
+            View key profile performance metrics from the reporting
+          </p>
         </div>
-        
-        <div className="relative">
-          <button className="p-2 rounded-xl hover:bg-gray-100/80 transition-all duration-200 hover:scale-105 backdrop-blur-sm group">
-            <MoreHorizontal className="h-5 w-5 text-gray-500 group-hover:text-gray-700" />
-          </button>
-        </div>
+        <button className="p-1 rounded-full hover:bg-gray-100 transition-colors">
+          <MoreHorizontal className="h-5 w-5 text-gray-500" />
+        </button>
       </div>
 
-      {/* Metrics container */}
-      <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200/50">
+      <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-200/80">
         {metrics.map((metric, idx) => (
           <MetricBox
-            key={idx}
+            key={metric.title}
             title={metric.title}
             tag={metric.tag}
             count={metric.count}
             change={metric.change}
             isPositive={metric.isPositive}
             isFirst={idx === 0}
-            icon={metric.icon}
-            color={metric.color}
-            delay={idx * 200}
           />
         ))}
-      </div>
-
-      {/* Footer insights */}
-      <div className="mt-6 pt-4 border-t border-gray-200/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Live data • Updated 2 minutes ago</span>
-          </div>
-          <button className="text-sm text-orange-500 hover:text-orange-600 font-medium transition-colors">
-            View detailed report →
-          </button>
-        </div>
       </div>
     </div>
   );

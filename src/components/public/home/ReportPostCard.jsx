@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthProvider';
-import { useDeletePost, useReportPost, useUpdatePost } from '../../../hooks/user/usePostTan';
+import {
+  useDeletePost,
+  useReportPost,
+  useLikePost,    // <--- IMPORT new like hook
+  useDislikePost, // <--- IMPORT new dislike hook
+} from '../../../hooks/user/usePostTan';
 import clsx from 'clsx';
 import { useSocket } from '../../../context/SocketProvider';
 
@@ -89,7 +94,7 @@ const CustomAvatar = ({ fullName, imageUrl, size = 'w-11 h-11' }) => {
     return hash;
   };
   const colors = [
-    'from-blue-500 to-purple-600', // Reverted to more diverse gradients for avatar
+    'from-blue-500 to-purple-600',
     'from-green-500 to-emerald-600',
     'from-purple-500 to-pink-600',
     'from-red-500 to-orange-600',
@@ -145,7 +150,7 @@ const CustomActionButton = ({
       type="button"
       onClick={onClick}
       className={clsx(
-        "inline-flex items-center gap-2 font-semibold rounded-xl transition-all duration-200", // Using rounded-xl from original ActionButton
+        "inline-flex items-center gap-2 font-semibold rounded-xl transition-all duration-200",
         "hover:scale-105 hover:shadow-md active:scale-95 group",
         variants[variant],
         sizes[size],
@@ -176,7 +181,10 @@ export default function CivicReportPostCard({ post = {} }) {
   const { user: currentUser } = useAuth();
   const deletePostMutation = useDeletePost();
   const reportPostMutation = useReportPost();
-  const updatePostMutation = useUpdatePost();
+  // const updatePostMutation = useUpdatePost(); // <--- REMOVE this line
+  const likePostMutation = useLikePost(); // <--- NEW: Initialize useLikePost hook
+  const dislikePostMutation = useDislikePost(); // <--- NEW: Initialize useDislikePost hook
+
 
   const {
     _id,
@@ -192,15 +200,15 @@ export default function CivicReportPostCard({ post = {} }) {
     sharesCount = 0,
     likes = [],
     dislikes = [],
-    visibility = 'Public', // Added visibility field from schema
+    visibility = 'Public',
 
     // Report Issue specific fields from schema
     categoryId,
     priorityLevel = 'Medium',
     responsibleDepartment,
-    address, // Now used for location display
+    address,
     expectedResolutionTime,
-    labels = [],
+    labels = [], // Assuming this is for additional tags/labels
     status = 'ACTIVE',
   } = post;
 
@@ -212,6 +220,9 @@ export default function CivicReportPostCard({ post = {} }) {
   const { onlineUsers } = useSocket();
   const authorUserId = authorId?._id?.toString() || authorId?.toString() || '';
   const isAuthorOnline = onlineUsers?.includes(authorUserId) || false;
+
+  // Determine if current user is the author
+  const isAuthor = currentUser?.id === authorUserId;
 
   const isLikedByCurrentUser = currentUser ? likes.includes(currentUser.id) : false;
   const isDislikedByCurrentUser = currentUser ? dislikes.includes(currentUser.id) : false;
@@ -263,74 +274,30 @@ export default function CivicReportPostCard({ post = {} }) {
   const imagesToUse = attachments.length
     ? attachments.map((att) => ({
         url: typeof att === 'string' ? getImageUrl(att) : getImageUrl(att.url),
-        type: 'image', // Assuming all are images for display
+        type: 'image',
       }))
     : [];
 
   const handleOpenPostDetailModal = () => {
-    setShowModal(true); // Open the PostDetailModal
+    setShowModal(true);
   };
 
+  // --- UPDATED: Use useLikePost mutation ---
   const handleLike = () => {
     if (!currentUser) {
-      toast.error('Please log in to upvote reports.');
+      toast.error('Please log in to like this post.');
       return;
     }
-
-    const newLikes = isLikedByCurrentUser
-      ? likes.filter(id => id !== currentUser.id)
-      : [...likes, currentUser.id];
-
-    const newDislikes = isDislikedByCurrentUser
-      ? dislikes.filter(id => id !== currentUser.id)
-      : dislikes;
-
-    updatePostMutation.mutate({
-      id: _id,
-      updateData: {
-        likes: newLikes,
-        dislikes: newDislikes,
-      }
-    }, {
-      onSuccess: () => {
-        toast.success(isLikedByCurrentUser ? 'Removed upvote!' : 'Upvoted report!');
-      },
-      onError: (err) => {
-        console.error("Upvote update failed:", err);
-        toast.error(err.response?.data?.message || "Failed to update upvote status.");
-      }
-    });
+    likePostMutation.mutate(_id); // Call the new likePost mutation
   };
 
+  // --- UPDATED: Use useDislikePost mutation ---
   const handleDislike = () => {
     if (!currentUser) {
-      toast.error('Please log in to downvote reports.');
+      toast.error('Please log in to dislike this post.');
       return;
     }
-
-    const newDislikes = isDislikedByCurrentUser
-      ? dislikes.filter(id => id !== currentUser.id)
-      : [...dislikes, currentUser.id];
-
-    const newLikes = isLikedByCurrentUser
-      ? likes.filter(id => id !== currentUser.id)
-      : likes;
-
-    updatePostMutation.mutate({
-      id: _id,
-      updateData: {
-        likes: newLikes,
-        dislikes: newDislikes,
-      }
-    }, {
-      onSuccess: () => {
-        toast.success(isDislikedByCurrentUser ? 'Removed downvote!' : 'Downvoted report!');
-      },
-      onError: (err) => {
-        console.error("Downvote update failed:", err);
-        toast.error(err.response?.data?.message || "Failed to update downvote status.");
-      }
-    });
+    dislikePostMutation.mutate(_id); // Call the new dislikePost mutation
   };
 
   const handleDeletePost = () => {
@@ -476,7 +443,7 @@ export default function CivicReportPostCard({ post = {} }) {
                 />
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                   <div className="text-white text-center">
-                    <div className="text-2xl font-bold mb-1">+{count - 2}</div>
+                    <div className="text-2xl font-bold mb-1">+{imagesToUse.length - 2}</div>
                     <div className="text-sm opacity-90">more photos</div>
                   </div>
                 </div>
@@ -500,9 +467,9 @@ export default function CivicReportPostCard({ post = {} }) {
       <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600`}></div>
 
       {/* Main Content Area */}
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 ">
         {/* Profile Header (Avatar, Name, Date, Visibility) and More Options */}
-        <div className="flex items-start justify-between gap-3 mb-4"> {/* Changed to items-start for better alignment with multiline text */}
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <CustomAvatar
               fullName={authorId?.fullName}
@@ -511,11 +478,11 @@ export default function CivicReportPostCard({ post = {} }) {
             />
             <div className="flex flex-col">
               <p className="text-sm font-medium text-gray-900">{authorId?.fullName || 'Anonymous Citizen'}</p>
-              <div className="flex items-center gap-2"> {/* New div for date and visibility */}
+              <div className="flex items-center gap-2">
                 <p className="text-xs text-gray-500">Reported {formattedDate}</p>
-                {visibility && visibility !== 'Admin' && ( // Added condition to exclude 'Admin' visibility
+                {visibility && visibility !== 'Admin' && (
                   <CustomBadge className="bg-gray-100 text-gray-700 border-gray-200 px-2 py-1">
-                    <Eye className="h-3 w-3 mr-1" /> {/* Eye icon for visibility */}
+                    <Eye className="h-3 w-3 mr-1" />
                     {visibility}
                   </CustomBadge>
                 )}
@@ -568,14 +535,14 @@ export default function CivicReportPostCard({ post = {} }) {
           </CustomBadge>
         </div>
 
-        {/* Description Section - Now directly after badges */}
+        {/* Description Section */}
         <section className="mb-5 text-gray-800 leading-relaxed">
           <p
             ref={contentRef}
             className="whitespace-pre-wrap text-base"
             style={{
               display: '-webkit-box',
-              WebkitLineClamp: expanded ? 'unset' : 4, // Show 4 lines by default
+              WebkitLineClamp: expanded ? 'unset' : 4,
               WebkitBoxOrient: 'vertical',
               overflow: expanded ? 'visible' : 'hidden',
               textOverflow: 'ellipsis',
@@ -591,7 +558,7 @@ export default function CivicReportPostCard({ post = {} }) {
               aria-expanded={expanded}
             >
               {expanded ? 'Show less' : 'Show more'}
-              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} {/* New icons */}
+              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           )}
         </section>
@@ -639,13 +606,12 @@ export default function CivicReportPostCard({ post = {} }) {
               <Paperclip className="h-4 w-4 text-gray-500" />
               <span className="font-medium text-gray-700">Attachments:</span>
             </div>
-            {/* Image rendering logic - adjusted heights */}
             {imagesToUse.length === 1 && (
               <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                 <img
                   src={imagesToUse[0].url || "/placeholder.svg"}
                   alt="Issue evidence"
-                  className="w-full h-24 object-cover" // Consistent smaller height
+                  className="w-full h-24 object-cover"
                 />
               </div>
             )}
@@ -656,7 +622,7 @@ export default function CivicReportPostCard({ post = {} }) {
                     <img
                       src={attachment.url || "/placeholder.svg"}
                       alt={`Issue evidence ${idx + 1}`}
-                      className="w-full h-24 object-cover" // Consistent smaller height
+                      className="w-full h-24 object-cover"
                     />
                   </div>
                 ))}
@@ -668,14 +634,14 @@ export default function CivicReportPostCard({ post = {} }) {
                   <img
                     src={imagesToUse[0].url || "/placeholder.svg"}
                     alt="First image"
-                    className="w-full h-24 object-cover" // Consistent smaller height
+                    className="w-full h-24 object-cover"
                   />
                 </div>
                 <div className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm group cursor-pointer">
                   <img
                     src={imagesToUse[1].url || "/placeholder.svg"}
                     alt="Additional issue evidence"
-                    className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-300" // Consistent smaller height
+                    className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                     <div className="text-white text-center">
@@ -693,7 +659,7 @@ export default function CivicReportPostCard({ post = {} }) {
       {/* Footer with Action Buttons */}
       <footer className="bg-gray-50 border-t border-gray-200 p-6 rounded-xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Left side: Like, Dislike, Share */}
+          {/* Left side: Like, Dislike, Comments */}
           <div className="flex items-center gap-3">
             <CustomActionButton
               icon={ThumbsUp}
@@ -720,7 +686,7 @@ export default function CivicReportPostCard({ post = {} }) {
             />
           </div>
 
-          {/* Right side: Comments */}
+          {/* Right side: Share */}
           <div className="flex items-center gap-3">
             <CustomActionButton
               icon={Share2}

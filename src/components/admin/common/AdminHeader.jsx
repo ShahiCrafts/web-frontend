@@ -4,15 +4,12 @@ import {
   Search,
   ChevronDown,
   Bell,
-  Keyboard,
   X,
-  Sun,
   User,
   LogOut,
-  Settings,
-  Moon,
   Command,
 } from "lucide-react";
+import { useAuth } from "../../../context/AuthProvider"; // Import useAuth hook
 
 const useOnClickOutside = (ref, handler) => {
   useEffect(() => {
@@ -33,29 +30,27 @@ export default function AdminHeader({
   sidebarOpen,
   setSidebarOpen,
   customer,
-  toggleTheme,
+  // toggleTheme prop is no longer needed as dark mode toggle is removed
 }) {
+  const { user, signOut } = useAuth(); // Use the auth hook to get user and signOut function
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // isDarkMode state and handleThemeToggle are removed as per request
   const [searchFocused, setSearchFocused] = useState(false);
-  const [notificationCount] = useState(3);
+  const [notificationCount] = useState(3); // Keep notification count for demo
   const profileMenuRef = useRef(null);
   const mobileSearchRef = useRef(null);
-  
-  // Mock user data for demo
-  const currentUser = {
-    fullName: "Sarah Johnson",
-    email: "sarah.johnson@ongo.com"
-  };
 
-  const isLoggingOut = false;
+  // Use user data from AuthContext
+  const currentUser = user;
+
+  const isLoggingOut = false; // This can be managed by your signOut mutation if applicable
 
   useOnClickOutside(profileMenuRef, () => setProfileMenuOpen(false));
   useOnClickOutside(mobileSearchRef, () => setMobileSearchOpen(false));
 
   const iconSize = 20;
-  const name = currentUser?.fullName || "Anonymous User";
+  const name = currentUser?.fullName || currentUser?.email || "Anonymous User";
   const email = currentUser?.email || "user@example.com";
 
   const getInitials = (name) =>
@@ -71,13 +66,9 @@ export default function AdminHeader({
     return `hsl(${hue}, 70%, 50%)`;
   };
 
-  const handleThemeToggle = () => {
-    setIsDarkMode(!isDarkMode);
-    toggleTheme?.();
-  };
-
   const handleLogout = () => {
-    console.log("Logging out...");
+    signOut(); // Call the signOut function from AuthContext
+    console.log("User logged out.");
   };
 
   const Avatar = () => {
@@ -99,7 +90,7 @@ export default function AdminHeader({
         <div
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white cursor-pointer transition-all duration-300 group-hover:ring-4 group-hover:ring-orange-500/20 group-hover:scale-105 shadow-lg"
-          style={{ 
+          style={{
             backgroundColor: getColorFromName(name),
             background: `linear-gradient(135deg, ${getColorFromName(name)}, ${getColorFromName(name + "salt")})`
           }}
@@ -114,7 +105,7 @@ export default function AdminHeader({
   const iconButtonStyle = "p-2.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 hover:scale-105 backdrop-blur-sm";
 
   return (
-    <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 flex items-center justify-between px-4 sm:px-6 relative z-50 shadow-sm">
+    <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 flex items-center justify-between px-4 sm:px-6 relative z-50">
       {/* Left Section */}
       <div className="flex items-center gap-4">
         <button
@@ -125,7 +116,7 @@ export default function AdminHeader({
           <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <Menu size={iconSize} className="relative z-10 transition-transform duration-200 group-hover:rotate-12" />
         </button>
-        
+
         <div className="flex items-center group cursor-pointer">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 font-bold text-lg flex items-center select-none">
             .OnGo Desk
@@ -201,18 +192,6 @@ export default function AdminHeader({
           )}
         </div>
 
-        {/* Theme Toggle */}
-        <button
-          onClick={handleThemeToggle}
-          className={`text-gray-700 ${iconButtonStyle} relative overflow-hidden group`}
-          aria-label="Toggle theme"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <div className="relative z-10 transition-transform duration-500 group-hover:rotate-180">
-            {isDarkMode ? <Moon size={iconSize} /> : <Sun size={iconSize} />}
-          </div>
-        </button>
-
         {/* Notifications */}
         <button
           className={`relative text-gray-700 ${iconButtonStyle} group overflow-hidden`}
@@ -230,7 +209,7 @@ export default function AdminHeader({
         {/* Profile Menu */}
         <div className="relative" ref={profileMenuRef}>
           <Avatar />
-          
+
           {profileMenuOpen && (
             <div
               className="absolute top-12 right-0 w-72 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl text-sm z-50 origin-top-right border border-gray-200/50 overflow-hidden"
@@ -247,18 +226,9 @@ export default function AdminHeader({
                   </div>
                 </div>
               </div>
-              
-              <div className="py-2">
-                <a href="#" className="flex items-center w-full px-5 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-purple-500/10 transition-all duration-200 group">
-                  <User size={16} className="mr-3 transition-transform duration-200 group-hover:scale-110" /> 
-                  <span className="font-medium">My Profile</span>
-                </a>
-                <a href="#" className="flex items-center w-full px-5 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-green-500/10 hover:to-blue-500/10 transition-all duration-200 group">
-                  <Settings size={16} className="mr-3 transition-transform duration-200 group-hover:rotate-90" /> 
-                  <span className="font-medium">Settings</span>
-                </a>
-              </div>
-              
+
+              {/* Removed My Profile and Settings links */}
+
               <div className="py-2 border-t border-gray-200/50">
                 <button
                   onClick={handleLogout}
@@ -287,7 +257,7 @@ export default function AdminHeader({
             opacity: 1;
           }
         }
-        
+
         @keyframes slideIn {
           from {
             transform: scale(0.95) translateY(-10px);

@@ -1,11 +1,13 @@
+// src/components/admin/users/UserAccounts.jsx
 import React, { useState } from 'react';
 import { Ban, Trash2, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthProvider';
 import { useLogoutTan } from '../../../hooks/useLoginTan';
-import { useFetchUsers, useDeleteUser } from '../../../hooks/admin/useUserTan';
+import { useFetchUsers, useDeleteUser, useToggleUserBanStatus } from '../../../hooks/admin/useUserTan';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import Pagination from '../../common/Pagination';
+import BanConfirmDialog from './BanConfirmDialog';
 
 const Avatar = ({ email, color }) => {
   const initial = email ? email.charAt(0).toUpperCase() : '?';
@@ -16,14 +18,25 @@ const Avatar = ({ email, color }) => {
   );
 };
 
-const StatusBadge = ({ isActive }) => {
+const StatusBadge = ({ isActive, isBanned }) => {
   const baseClasses = 'px-2.5 py-0.5 text-xs font-medium rounded-full inline-block';
-  const activeClasses = 'bg-green-100 text-green-800';
-  const inactiveClasses = 'bg-red-100 text-red-800';
+  let statusText = 'Unknown';
+  let statusClasses = 'bg-gray-100 text-gray-800';
+
+  if (isBanned) {
+    statusText = 'Banned';
+    statusClasses = 'bg-red-100 text-red-800';
+  } else if (isActive) {
+    statusText = 'Online';
+    statusClasses = 'bg-green-100 text-green-800';
+  } else {
+    statusText = 'Offline';
+    statusClasses = 'bg-yellow-100 text-yellow-800';
+  }
 
   return (
-    <span className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}>
-      {isActive ? 'Online' : 'Offline'}
+    <span className={`${baseClasses} ${statusClasses}`}>
+      {statusText}
     </span>
   );
 };
@@ -46,16 +59,19 @@ const SortableHeader = ({ tkey, label, requestSort, sortConfig }) => (
   </th>
 );
 
-export default function UserAccounts({ search }) {
+export default function UserAccounts({ search, role = null }) { // <--- Accept a role prop with a default of null
   const [selectedIds, setSelectedIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'descending' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [confirmBanOpen, setConfirmBanOpen] = useState(false);
+  const [userToToggleBan, setUserToToggleBan] = useState(null);
 
   const { user: currentUser } = useAuth();
   const deleteUserMutation = useDeleteUser();
+  const toggleBanMutation = useToggleUserBanStatus();
   const { mutate: logoutUser } = useLogoutTan();
 
   const { data, isLoading, isError, error } = useFetchUsers({
@@ -64,6 +80,7 @@ export default function UserAccounts({ search }) {
     search,
     sortBy: sortConfig.key,
     sortOrder: sortConfig.direction === 'ascending' ? 'asc' : 'desc',
+    role: role, // <--- Pass the role prop to the hook
   });
 
   const users = data?.users || [];
@@ -85,9 +102,9 @@ export default function UserAccounts({ search }) {
     setSelectedIds(prev => prev.includes(_id) ? prev.filter(id => id !== _id) : [...prev, _id]);
   };
 
-  const handleDelete = (_id) => {
-    setUserToDelete(_id);
-    setConfirmOpen(true);
+  const handleDeleteClick = (user) => {
+    setUserToDelete(user._id);
+    setConfirmDeleteOpen(true);
   };
 
   const confirmDelete = () => {
@@ -105,14 +122,46 @@ export default function UserAccounts({ search }) {
         }
       },
       onError: (err) => {
-        toast.error(`Failed to delete user: ${err.message}`);
+        toast.error(`Failed to delete user: ${err.message || 'Server error'}`);
       },
       onSettled: () => {
-        setConfirmOpen(false);
+        setConfirmDeleteOpen(false);
         setUserToDelete(null);
       }
     });
   };
+
+  const handleToggleBanClick = (user) => {
+    setUserToToggleBan(user);
+    setConfirmBanOpen(true);
+  };
+
+  const confirmToggleBan = () => {
+    if (!userToToggleBan) return;
+    const isBanningSelf = currentUser?.id === userToToggleBan._id;
+
+    if (isBanningSelf) {
+      toast.error("You cannot ban or unban your own account.");
+      setConfirmBanOpen(false);
+      setUserToToggleBan(null);
+      return;
+    }
+
+    toggleBanMutation.mutate(userToToggleBan._id, {
+      onSuccess: () => {
+        toast.success(`User ${userToToggleBan.username} has been ${userToToggleBan.isBanned ? 'unbanned' : 'banned'}!`);
+        setSelectedIds(prev => prev.filter(id => id !== userToToggleBan._id));
+      },
+      onError: (err) => {
+        toast.error(`Failed to ${userToToggleBan.isBanned ? 'unban' : 'ban'} user: ${err.message || 'Server error'}`);
+      },
+      onSettled: () => {
+        setConfirmBanOpen(false);
+        setUserToToggleBan(null);
+      }
+    });
+  };
+
 
   if (isError) {
     return <p className="p-4 text-red-600 text-center">Error: {error?.message}</p>;
@@ -134,7 +183,7 @@ export default function UserAccounts({ search }) {
               </th>
               <SortableHeader tkey="fullName" label="Name" requestSort={requestSort} sortConfig={sortConfig} />
               <SortableHeader tkey="role" label="Role" requestSort={requestSort} sortConfig={sortConfig} />
-              <SortableHeader tkey="status" label="Status" requestSort={requestSort} sortConfig={sortConfig} />
+              <SortableHeader tkey="isBanned" label="Status" requestSort={requestSort} sortConfig={sortConfig} />
               <SortableHeader tkey="createdAt" label="Join Date" requestSort={requestSort} sortConfig={sortConfig} />
               <SortableHeader tkey="lastLogin" label="Last Active" requestSort={requestSort} sortConfig={sortConfig} />
               <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -179,20 +228,21 @@ export default function UserAccounts({ search }) {
                   </td>
                   <td className="px-6 py-4">{user.role}</td>
                   <td className="px-6 py-4">
-                    <StatusBadge isActive={user.isActive === true} />
+                    <StatusBadge isActive={user.isActive === true} isBanned={user.isBanned === true} />
                   </td>
-                  <td className="px-6 py-4">{user.createdAt}</td>
-                  <td className="px-6 py-4">{user.lastLogin || '-- --'}</td>
+                  <td className="px-6 py-4">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-- --'}</td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex gap-2 justify-center">
                       <button
-                        onClick={() => alert(`Ban user ${user._id}`)}
-                        className="text-orange-600 hover:text-orange-800"
+                        onClick={() => handleToggleBanClick(user)}
+                        className={`text-${user.isBanned ? 'green' : 'orange'}-600 hover:text-${user.isBanned ? 'green' : 'orange'}-800`}
+                        title={user.isBanned ? "Unban User" : "Ban User"}
                       >
                         <Ban className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(user._id)}
+                        onClick={() => handleDeleteClick(user)}
                         className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -219,10 +269,18 @@ export default function UserAccounts({ search }) {
       />
 
       <ConfirmDialog
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
         onConfirm={confirmDelete}
         isLoading={deleteUserMutation.isLoading}
+      />
+      <BanConfirmDialog
+        open={confirmBanOpen}
+        onClose={() => setConfirmBanOpen(false)}
+        onConfirm={confirmToggleBan}
+        username={userToToggleBan?.username}
+        isBanned={userToToggleBan?.isBanned}
+        isLoading={toggleBanMutation.isLoading}
       />
     </>
   );

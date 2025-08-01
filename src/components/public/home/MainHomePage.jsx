@@ -156,7 +156,7 @@ export default function MainHomePage() {
             </div>
 
             {/* Mobile Bottom Navigation */}
-            <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 border-t border-gray-200/50 shadow-2xl sm:hidden">
+            <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 border-t border-gray-200/50 shadow-2xl sm:hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none"></div>
                 <div className="grid grid-cols-5 gap-x-1 px-2 py-0.5 relative">
                     {filters.slice(0, 2).map((filter) => {

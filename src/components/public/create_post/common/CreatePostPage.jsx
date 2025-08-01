@@ -4,19 +4,16 @@ import toast from 'react-hot-toast';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
-// Form Components
 import ReportIssueForm from '../issue_posts/ReportIssueForm';
 import CreateEventForm from '../event_posts/CreateEventForm';
 import CreatePollForm from '../poll_posts/CreatePollForm';
 import DiscussionForm from '../discussion_posts/DiscussionForm';
 
-// Preview Components
 import PreviewDiscussion from '../discussion_posts/PreviewDiscussion';
 import PreviewReport from '../issue_posts/PreviewReport';
 import EventPreviewCard from '../event_posts/EventPreviewCard';
 import PollPreviewCard from '../poll_posts/PollPreviewCard';
 
-// UI Components
 import PostTypeSelector from './PostTypeSelector';
 import PostingGuidelines from './PostingGuidelines';
 import QuickStats from './QuickStats';
@@ -25,8 +22,10 @@ import IconWrapper from './IconWrapper';
 // Hooks
 import { useCreatePost } from '../../../../hooks/user/usePostTan';
 import { useAuth } from '../../../../context/AuthProvider';
+import { useFetchCategories } from '../../../../hooks/admin/useCategoryTan'; // Import the hook
 
 const PostHeader = ({ togglePreview, onPublish, isSubmitting, onGoBack }) => (
+  // ... (Header component remains unchanged)
   <div className="flex items-center justify-between">
     <div className="flex items-center gap-4">
       <button className="text-gray-600 hover:text-gray-900" onClick={onGoBack}>
@@ -64,27 +63,36 @@ const PostHeader = ({ togglePreview, onPublish, isSubmitting, onGoBack }) => (
   </div>
 );
 
+
 const Sidebar = ({ title, content, tags }) => (
+  // ... (Sidebar component remains unchanged)
   <div className="space-y-6">
     <PostingGuidelines />
     <QuickStats title={title} content={content} tags={tags} />
   </div>
 );
 
+
 export default function CreatePostPage({ onClose }) {
   const { user: currentUser } = useAuth();
   const createPostMutation = useCreatePost();
 
+  // Fetch categories using the hook
+  const { data: categoriesData, isLoading: isLoadingCategories } = useFetchCategories();
+  const categories = categoriesData?.categories || [];
+
+  console.log(categories);
+
   const [selectedPostType, setSelectedPostType] = useState('Discussion');
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attachments, setAttachments] = useState([]); // Centralized attachments state
+  const [attachments, setAttachments] = useState([]);
 
   const [discussion, setDiscussion] = useState({ title: '', content: '', tags: [], community: null });
 
   const [report, setReport] = useState({
-    visibility: 'Public', issueTitle: '', issueDescription: '', category: '', priorityLevel: 'Medium',
-    responsibleDepartment: '', address: '', nearbyLandmark: '', contactInfo: '',
+    visibility: 'Public', issueTitle: '', issueDescription: '', category: '',
+    address: '', nearbyLandmark: '', contactInfo: '',
     expectedResolutionTime: '', publicVisibility: true, allowComments: true,
   });
 
@@ -96,7 +104,7 @@ export default function CreatePostPage({ onClose }) {
 
   const [poll, setPoll] = useState({
     question: '', description: '', options: [{ text: '', votes: 0 }, { text: '', votes: 0 }],
-    settings: { allowMultiple: false, anonymous: true, allowComments: true, duration: '1 Week' } // Default duration
+    settings: { allowMultiple: false, anonymous: true, allowComments: true, duration: '1 Week' }
   });
 
   const handleClose = () => {
@@ -108,8 +116,8 @@ export default function CreatePostPage({ onClose }) {
   const resetForm = () => {
     setDiscussion({ title: '', content: '', tags: [], community: null });
     setReport({
-      visibility: 'Public', issueTitle: '', issueDescription: '', category: '', priorityLevel: 'Medium',
-      responsibleDepartment: '', address: '', nearbyLandmark: '', contactInfo: '',
+      visibility: 'Public', issueTitle: '', issueDescription: '', category: '',
+      address: '', nearbyLandmark: '', contactInfo: '',
       expectedResolutionTime: '', publicVisibility: true, allowComments: true,
     });
     setEvent({
@@ -121,11 +129,11 @@ export default function CreatePostPage({ onClose }) {
       question: '', description: '', options: [{ text: '', votes: 0 }, { text: '', votes: 0 }],
       settings: { allowMultiple: false, anonymous: true, allowComments: true, duration: '1 Week' }
     });
-    setAttachments([]); // Crucial: Clear attachments on form reset
+    setAttachments([]);
     setShowPreview(false);
   };
 
-  // Helper function to calculate poll end date based on duration string
+  // ... (calculatePollEndDate function remains unchanged)
   const calculatePollEndDate = (duration) => {
     const now = new Date();
     switch (duration) {
@@ -161,17 +169,16 @@ export default function CreatePostPage({ onClose }) {
       case 'Report Issue':
         formData.append('title', report.issueTitle);
         formData.append('content', report.issueDescription);
-        formData.append('priorityLevel', report.priorityLevel);
-        formData.append('responsibleDepartment', report.responsibleDepartment);
         formData.append('address', report.address);
-        formData.append('nearbyLandmark', report.nearbyLandmark); // Make sure this is present in your report state
+        formData.append('nearbyLandmark', report.nearbyLandmark);
         formData.append('contactInfo', report.contactInfo);
         formData.append('expectedResolutionTime', report.expectedResolutionTime);
         formData.append('visibility', report.visibility === 'AdminOnly' ? 'Admin' : 'Public');
         formData.append('allowComments', report.allowComments);
-        formData.append('category', report.category); // Map to categoryId if needed by backend schema
+        formData.append('categoryId', report.category);
         break;
 
+      // ... (Other cases for Event, Poll, Discussion remain unchanged)
       case 'Event':
         formData.append('title', event.eventTitle);
         formData.append('eventDescription', event.eventDescription);
@@ -190,17 +197,17 @@ export default function CreatePostPage({ onClose }) {
       case 'Poll':
         // Frontend validation for required poll fields
         if (!poll.question || !poll.settings.duration) {
-            toast.error("Polls require a question and a duration.");
-            setIsSubmitting(false);
-            NProgress.done();
-            return;
+          toast.error("Polls require a question and a duration.");
+          setIsSubmitting(false);
+          NProgress.done();
+          return;
         }
         const filteredOptions = poll.options.filter(opt => opt.text.trim() !== '');
         if (filteredOptions.length < 2) {
-            toast.error('Poll must have at least two non-empty options.');
-            setIsSubmitting(false);
-            NProgress.done();
-            return;
+          toast.error('Poll must have at least two non-empty options.');
+          setIsSubmitting(false);
+          NProgress.done();
+          return;
         }
 
         formData.append('question', poll.question);
@@ -241,7 +248,7 @@ export default function CreatePostPage({ onClose }) {
         resetForm();
       },
       onError: (err) => {
-        console.error("Failed to create post error details:", err.response?.data); // Log full error
+        console.error("Failed to create post error details:", err.response?.data);
         const errorMsg = err.response?.data?.message || 'Please check form fields and try again.';
         toast.error(`Failed to create post: ${errorMsg}`);
       },
@@ -255,7 +262,15 @@ export default function CreatePostPage({ onClose }) {
   const renderForm = () => {
     switch (selectedPostType) {
       case 'Report Issue':
-        return <ReportIssueForm report={report} setReport={setReport} attachments={attachments} setAttachments={setAttachments} />;
+        return <ReportIssueForm
+          report={report}
+          setReport={setReport}
+          attachments={attachments}
+          setAttachments={setAttachments}
+          categories={categories} // Pass fetched categories
+          isLoadingCategories={isLoadingCategories} // Pass loading state
+        />;
+      // ... (Other cases for Event, Poll, Discussion remain unchanged)
       case 'Event':
         return <CreateEventForm event={event} setEvent={setEvent} />;
       case 'Poll':
@@ -279,6 +294,7 @@ export default function CreatePostPage({ onClose }) {
     }
   };
 
+  // ... (renderPreview and sidebarProps remain mostly unchanged, just update for removed fields)
   const renderPreview = () => {
     switch (selectedPostType) {
       case 'Report Issue':
@@ -311,20 +327,22 @@ export default function CreatePostPage({ onClose }) {
   const sidebarProps = {
     title: selectedPostType === 'Discussion' ? discussion.title :
       selectedPostType === 'Report Issue' ?
-      report.issueTitle :
-      selectedPostType === 'Event' ? event.eventTitle :
-        selectedPostType === 'Poll' ?
-        poll.question : '',
+        report.issueTitle :
+        selectedPostType === 'Event' ? event.eventTitle :
+          selectedPostType === 'Poll' ?
+            poll.question : '',
     content: selectedPostType === 'Discussion' ? discussion.content :
       selectedPostType === 'Report Issue' ?
-      report.issueDescription :
-      selectedPostType === 'Event' ? event.eventDescription :
-        selectedPostType === 'Poll' ?
-        poll.description : '',
+        report.issueDescription :
+        selectedPostType === 'Event' ? event.eventDescription :
+          selectedPostType === 'Poll' ?
+            poll.description : '',
     tags: selectedPostType === 'Discussion' ? discussion.tags : [],
   };
 
+
   return (
+    // ... (Main JSX structure remains unchanged)
     <div className="font-sans">
       <div className="container mx-auto p-4">
         <div className="flex flex-col lg:flex-row gap-8">

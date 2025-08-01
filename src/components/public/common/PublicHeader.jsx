@@ -56,9 +56,6 @@ export default function PublicHeader({
     const name = currentUser?.fullName || "Anonymous User";
     const email = currentUser?.email || "user@example.com";
 
-    // These functions are unused in the current render logic within PublicHeader,
-    // but they are part of the original CustomAvatar component's internal logic.
-    // Keeping them here for completeness if they were meant to be used for avatar within header directly.
     const getInitials = (name) =>
         name?.split(" ").map((n) => n[0]).join("").toUpperCase();
 
@@ -80,7 +77,7 @@ export default function PublicHeader({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute top-full mt-2 right-0 w-64 bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-xl shadow-xl z-50 overflow-hidden"
+            className="absolute top-full mt-2 right-0 w-64 bg-white border border-gray-200/50 rounded-xl shadow-xl z-70 overflow-hidden"
         >
             <div className="px-4 py-4 border-b border-gray-100/50 bg-gradient-to-r from-gray-50/50 to-white/50">
                 <div className="flex items-center gap-3">
@@ -121,7 +118,6 @@ export default function PublicHeader({
                         Help & Support
                     </motion.button>
                 </li>
-                {/* Theme Toggle option */}
                 {toggleTheme && (
                     <li>
                         <motion.button
@@ -133,9 +129,7 @@ export default function PublicHeader({
                                 setProfileMenuOpen(false);
                             }}
                         >
-                            {/* You might want to pass current theme to show appropriate icon */}
-                            {/* For now, just a generic toggle icon or a single theme icon */}
-                            <Sun size={18} className="text-gray-500" /> {/* Or a dynamic icon */}
+                            <Sun size={18} className="text-gray-500" />
                             Toggle Theme
                         </motion.button>
                     </li>
@@ -156,21 +150,20 @@ export default function PublicHeader({
     );
 
     return (
-        // Changed z-index from z-50 (implicit from sticky) to an explicit higher value
         <motion.nav
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="w-full bg-white/80 backdrop-blur-xl border-b border-gray-200/50 py-3 z-[60] sticky top-0" // Explicit z-index: 60
+            className="w-full border-b border-gray-200/50 py-3 z-80 bg-white sticky top-0"
         >
             <div className="w-full max-w-7xl flex items-center justify-between mx-auto relative px-4 sm:px-6 md:px-6 lg:px-0">
-                {/* Mobile Left Section (Hamburger Menu & Logo/Dropdown) */}
-                <div className="flex items-center gap-3 md:hidden">
+                {/* Hamburger Menu (Visible and functional on mobile/tablet, visible but non-functional on desktop) */}
+                <div className="flex items-center gap-3">
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="text-gray-700 p-2 rounded-xl hover:bg-gray-100/80 transition-all duration-200"
+                        className="text-gray-700 p-2 rounded-xl hover:bg-gray-100/80 transition-all duration-200 lg:pointer-events-none lg:cursor-default lg:hover:bg-transparent" // Functional below lg, non-functional on lg and above
                         aria-label="Toggle Sidebar"
                     >
                         <Menu size={24} />
@@ -193,24 +186,7 @@ export default function PublicHeader({
                     </motion.div>
                 </div>
 
-                {/* Desktop Logo */}
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="hidden md:flex items-center gap-3 cursor-pointer"
-                >
-                    <motion.img
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.8 }}
-                        src={logo.src || logo}
-                        alt="logo"
-                        className="w-8 h-8 rounded-full shadow-lg"
-                    />
-                    <span className="text-xl font-bold bg-gradient-to-r from-[#FF5C00] to-[#FF8A00] bg-clip-text text-transparent">
-                        .OnGoDesk
-                    </span>
-                </motion.div>
-
-                {/* Search */}
+                {/* Search (Desktop Only) */}
                 <div className="flex-1 mx-4 hidden md:flex justify-center">
                     <div className="relative w-full max-w-md">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
@@ -240,7 +216,6 @@ export default function PublicHeader({
                             <Search size={22} />
                         </motion.button>
 
-                        {/* Mobile Profile Dropdown (triggered by logo click now, but keeping this div structure for consistency if separate button is desired) */}
                         <div
                             className="relative cursor-pointer p-1 rounded-xl hover:bg-gray-100/80 transition-all duration-200"
                             onClick={() => setProfileMenuOpen(!profileMenuOpen)}

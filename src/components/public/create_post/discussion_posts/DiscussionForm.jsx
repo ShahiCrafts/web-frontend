@@ -1,4 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+// src/components/discussions/DiscussionForm.jsx
+
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
     FileText,
     Edit3,
@@ -12,6 +14,20 @@ import {
 import FormSection from '../common/FormSection';
 import FormInput from '../common/FormInput';
 import { useFetchTags } from '../../../../hooks/admin/useTagTan';
+import { useInfiniteApprovedCommunities } from '../../../../hooks/useCommunitiesTan';
+// ✅ 1. Import the CustomAvatar component
+import { CustomAvatar } from '../../../../pages/profile/CustomAvatar'; // Adjust path if needed
+
+// ✅ 2. Define a robust getImageUrl helper function at the top level
+const getImageUrl = (path) => {
+    if (!path) return null;
+    // If the path is already a full URL (like a placeholder), use it directly.
+    if (path.startsWith('http')) {
+        return path;
+    }
+    // Otherwise, construct the full URL for local server assets.
+    return `http://localhost:8080/${path.replace(/\\/g, '/')}`;
+};
 
 const FormTextArea = React.forwardRef(({ id, helpText, ...props }, ref) => (
     <div>
@@ -39,7 +55,7 @@ const MarkdownRenderer = ({ text }) => {
             return part;
         });
     };
-
+    
     const blocks = text.split('\n\n');
     return (
         <div className="w-full p-3 border border-t-0 border-gray-300 rounded-b-md bg-white min-h-[122px]">
@@ -74,7 +90,15 @@ export default function DiscussionForm({
     community, setCommunity,
     attachments, setAttachments
 }) {
-    const { data } = useFetchTags(); // ✅ Hook usage here
+    const { data: tagsData } = useFetchTags();
+    const {
+        data: communitiesData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: isLoadingCommunities,
+    } = useInfiniteApprovedCommunities({});
+
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [tagDropdown, setTagDropdown] = useState({ isOpen: false, query: '', filteredTags: [] });
     const [editorMode, setEditorMode] = useState('write');
@@ -82,14 +106,26 @@ export default function DiscussionForm({
 
     const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
+    const communityListRef = useRef(null);
     const contentWrapperRef = useRef(null);
     const textAreaRef = useRef(null);
 
-    const mockCommunities = [
-        { id: 'general', name: 'General', description: 'Post publicly for everyone to see', image: 'https://placehold.co/40x40/F97316/FFFFFF?text=G' },
-        { id: 'env', name: 'r/Environment', description: 'Latest news and updates', image: 'https://placehold.co/40x40/22C55E/FFFFFF?text=E' },
-        { id: 'heritage', name: 'r/Public Heritage', description: 'Preserving local culture', image: 'https://placehold.co/40x40/A855F7/FFFFFF?text=H' }
-    ];
+    const allCommunities = useMemo(() => {
+        return communitiesData?.pages.flatMap(page => page.communities) ?? [];
+    }, [communitiesData]);
+
+    const publicPostOption = {
+        _id: 'public',
+        name: 'Post Publicly',
+        description: 'Visible to everyone on the platform',
+        coverPhoto: { url: 'https://placehold.co/40x40/F97316/FFFFFF?text=P' }
+    };
+
+    useEffect(() => {
+        if (!community) {
+            setCommunity(publicPostOption);
+        }
+    }, [community, setCommunity]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -113,40 +149,43 @@ export default function DiscussionForm({
         setDropdownOpen(false);
     };
 
+    const handleCommunityScroll = () => {
+        const listEl = communityListRef.current;
+        if (listEl) {
+            const { scrollTop, scrollHeight, clientHeight } = listEl;
+            if (scrollHeight - scrollTop - clientHeight < 100 && hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+            }
+        }
+    };
+    
+    // --- The rest of the component logic remains the same ---
     const handleContentChange = (e) => {
         const newContent = e.target.value;
         setContent(newContent);
-
         const extractedTags = parseTagsFromContent(newContent);
         setTags(extractedTags);
-
         const cursorPosition = e.target.selectionStart;
         const textUpToCursor = newContent.substring(0, cursorPosition);
         const tagRegex = /(?:^|\s)#(\w*)$/;
         const match = textUpToCursor.match(tagRegex);
-
-        if (match && data?.tags) {
+        if (match && tagsData?.tags) {
             const query = match[1].toLowerCase();
-            const filtered = data.tags.filter(t => t.name.toLowerCase().startsWith(query));
+            const filtered = tagsData.tags.filter(t => t.name.toLowerCase().startsWith(query));
             setTagDropdown({ isOpen: filtered.length > 0, query, filteredTags: filtered.map(t => t.name) });
         } else {
             setTagDropdown(prev => ({ ...prev, isOpen: false }));
         }
     };
-
     const handleTagSelect = (tag) => {
         const tagStartIndex = content.lastIndexOf('#');
         if (tagStartIndex === -1) return;
-
         const textBeforeTag = content.substring(0, tagStartIndex);
         const textAfterTag = content.substring(tagStartIndex + 1 + tagDropdown.query.length);
         const newContent = `${textBeforeTag}#${tag} ${textAfterTag}`;
-
         setContent(newContent);
         setTags(parseTagsFromContent(newContent));
-
         setTagDropdown({ isOpen: false, query: '', filteredTags: [] });
-
         const newCursorPosition = tagStartIndex + 1 + tag.length + 1;
         setTimeout(() => {
             if (textAreaRef.current) {
@@ -155,7 +194,6 @@ export default function DiscussionForm({
             }
         }, 0);
     };
-
     const processFiles = (fileList) => {
         if (!fileList) return;
         const accepted = Array.from(fileList).filter(f => f.type.startsWith('image/'));
@@ -163,7 +201,6 @@ export default function DiscussionForm({
         const previews = limited.map(f => ({ id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f), status: 'uploading', progress: 0 }));
         if (!previews.length) return;
         setAttachments(prev => [...prev, ...previews]);
-
         previews.forEach(fileObj => {
             const interval = setInterval(() => {
                 setAttachments(prev =>
@@ -178,50 +215,82 @@ export default function DiscussionForm({
             }, 1200);
         });
     };
-
     const handleRemoveFile = (id) => {
         const file = attachments.find(f => f.id === id);
         if (file?.preview) URL.revokeObjectURL(file.preview);
         setAttachments(prev => prev.filter(f => f.id !== id));
     };
-
     const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
     const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); processFiles(e.dataTransfer.files); };
 
+
     return (
         <form className="space-y-8 bg-white mx-auto">
             <FormSection icon={FileText} title="Basic Information">
-                    <div className="relative" ref={dropdownRef}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Community</label>
-                        <button type="button" onClick={() => setDropdownOpen(!dropdownOpen)} className="w-full border border-gray-300 rounded-md bg-white px-3 py-2 text-left flex items-center justify-between">
-                            {community ? (
-                                <div className="flex items-center gap-3">
-                                    <img src={community.image} alt={community.name} className="w-8 h-8 rounded-full" />
-                                    <div><p className="text-gray-900 font-medium">{community.name}</p></div>
-                                </div>
-                            ) : (<span className="text-gray-500">Select a community or post publicly</span>)}
-                            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {dropdownOpen && (
-                            <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white py-1 shadow-lg">
-                                {mockCommunities.map((comm) => (
-                                    <li key={comm.id} onClick={() => handleSelectCommunity(comm)} className="cursor-pointer select-none py-2 px-3 hover:bg-gray-100">
+                <div className="relative" ref={dropdownRef}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Community</label>
+                    <button type="button" onClick={() => setDropdownOpen(!dropdownOpen)} className="w-full border border-gray-300 rounded-md bg-white px-3 py-2 text-left flex items-center justify-between">
+                        {community ? (
+                            <div className="flex items-center gap-3">
+                                {/* ✅ 3. Use CustomAvatar for the selected community */}
+                                <CustomAvatar
+                                    fullName={community.name}
+                                    imageUrl={getImageUrl(community.coverPhoto?.url)}
+                                    size="w-8 h-8"
+                                />
+                                <div><p className="text-gray-900 font-medium">{community.name}</p></div>
+                            </div>
+                        ) : (<span className="text-gray-500">Select a community...</span>)}
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {dropdownOpen && (
+                        <ul ref={communityListRef} onScroll={handleCommunityScroll} className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white py-1 shadow-lg">
+                            {isLoadingCommunities ? (
+                                <li className="cursor-default select-none py-2 px-3 text-gray-500">Loading...</li>
+                            ) : (
+                                <>
+                                    {/* ✅ 4. Use CustomAvatar in the dropdown list */}
+                                    <li key={publicPostOption._id} onClick={() => handleSelectCommunity(publicPostOption)} className="cursor-pointer select-none py-2 px-3 hover:bg-gray-100">
                                         <div className="flex items-center gap-3">
-                                            <img src={comm.image} alt={comm.name} className="w-8 h-8 rounded-full" />
+                                            <CustomAvatar
+                                                fullName={publicPostOption.name}
+                                                imageUrl={getImageUrl(publicPostOption.coverPhoto.url)}
+                                                size="w-8 h-8"
+                                            />
                                             <div>
-                                                <p className="font-medium text-gray-800">{comm.name}</p>
-                                                <p className="text-xs text-gray-500">{comm.description}</p>
+                                                <p className="font-medium text-gray-800">{publicPostOption.name}</p>
+                                                <p className="text-xs text-gray-500">{publicPostOption.description}</p>
                                             </div>
                                         </div>
                                     </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                    <FormInput id="title" label="Title" placeholder="What's your post about?" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required={true} helpText="Be specific and descriptive" />
-                </FormSection>
+                                    {allCommunities.map((comm) => (
+                                        <li key={comm._id} onClick={() => handleSelectCommunity(comm)} className="cursor-pointer select-none py-2 px-3 hover:bg-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <CustomAvatar
+                                                    fullName={comm.name}
+                                                    imageUrl={getImageUrl(comm.coverPhoto?.url)}
+                                                    size="w-8 h-8"
+                                                />
+                                                <div>
+                                                    <p className="font-medium text-gray-800">{comm.name}</p>
+                                                    <p className="text-xs text-gray-500">{comm.description}</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {isFetchingNextPage && (
+                                        <li className="cursor-default select-none py-2 px-3 text-center text-gray-500">Loading more...</li>
+                                    )}
+                                </>
+                            )}
+                        </ul>
+                    )}
+                </div>
+                <FormInput id="title" label="Title" placeholder="What's your post about?" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required={true} helpText="Be specific and descriptive" />
+            </FormSection>
 
+            {/* --- The rest of the JSX remains unchanged --- */}
             <FormSection icon={Edit3} title="Content">
                 <div className="relative" ref={contentWrapperRef}>
                     <div className="flex border-b border-gray-300 -mb-px">

@@ -48,10 +48,13 @@ export const useComments = (postId) => {
       setComments((prevComments) => [newComment, ...prevComments]);
     };
 
-    const handleCommentLikeUpdate = (data) => {
-      setComments((prev) =>
-        prev.map((c) =>
-          c._id === data.commentId ? { ...c, likes: data.likes } : c
+    const handleCommentLikeUpdate = (updatedComment) => {
+      console.log('[useComments] Received "commentLikeUpdate" event:', updatedComment);
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment._id === updatedComment._id 
+            ? updatedComment 
+            : comment
         )
       );
     };

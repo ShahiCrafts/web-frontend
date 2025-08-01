@@ -61,9 +61,8 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
       color: "from-green-500 to-emerald-500",
       description: "Manage community members",
       subItems: [
-        { label: "All Users", path: "/admin/users/all", icon: <Users size={16} /> },
+        { label: "All Users", path: "/admin/users/", icon: <Users size={16} /> },
         { label: "Citizens", path: "/admin/users/citizens", icon: <UserCircle size={16} /> },
-        { label: "Organizations", path: "/admin/users/organizations", icon: <Building2 size={16} /> },
       ],
     },
     {
@@ -105,13 +104,6 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
     },
     { type: 'heading', label: 'Administration' },
     {
-      icon: <Shield size={20} />,
-      label: "Roles & Permissions",
-      path: "/admin/roles",
-      color: "from-indigo-500 to-blue-500",
-      description: "Access control"
-    },
-    {
       icon: <Bell size={20} />,
       label: "Notifications",
       path: "/admin/notifications",
@@ -124,20 +116,6 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
       path: "/admin/categories",
       color: "from-lime-500 to-green-500",
       description: "Content organization"
-    },
-    {
-      icon: <Building2 size={20} />,
-      label: "Tenants",
-      path: "/admin/tenants",
-      color: "from-gray-500 to-slate-500",
-      description: "Multi-tenant management"
-    },
-    {
-      icon: <Settings size={20} />,
-      label: "Settings",
-      path: "/admin/settings",
-      color: "from-slate-500 to-gray-500",
-      description: "System configuration"
     },
   ];
 
@@ -157,7 +135,7 @@ export default function AdminSidebar({ sidebarOpen, setSidebarOpen }) {
           w-72 flex flex-col overflow-hidden
           bg-white/95 backdrop-blur-xl border-r border-gray-200/50
           transform transition-all duration-300 ease-in-out
-          z-50 shadow-2xl
+          z-50
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0 lg:static`}
       >

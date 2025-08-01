@@ -1,16 +1,29 @@
+// src/components/admin/users/MainUsersPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, UserCheck, UserPlus, BarChart2, Search, Download } from 'lucide-react';
-import Card from '../../../components/admin/contents/Card';
-import UserAccounts from './UserAccounts';
-import { useFetchUsers } from '../../../hooks/admin/useUserTan';
+import Card from '../../../components/admin/contents/Card'; // Assuming this Card component works
+import UserAccounts from './UserAccounts'; // Assuming this component exists
+import { useFetchUsers, useUserEngagementAnalytics } from '../../../hooks/admin/useUserTan'; // Updated import
+
+// Helper for consistent growth rate display
+const formatGrowthDetails = (growthRate) => {
+    const numericGrowth = parseFloat(growthRate);
+    if (isNaN(numericGrowth) || numericGrowth === 0) {
+        return <span className="text-gray-500">Stable</span>; // Or "No change"
+    }
+    const colorClass = numericGrowth > 0 ? "text-green-600" : "text-red-600";
+    const sign = numericGrowth > 0 ? "+" : "";
+    return <span className={colorClass}>{sign}{numericGrowth.toFixed(1)}% from last month</span>;
+};
 
 export default function MainUsersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [showDownloadMenu, setShowDownloadMenu] = useState(false);
     const downloadRef = useRef(null);
-    const { data } = useFetchUsers({ limit: -1 });
-    const totalCount = data?.total || 0;
+
+    const { data: allUsersData, isLoading: isUsersLoading, isError: isUsersError } = useFetchUsers({ limit: -1 });
+    const { data: userEngagementData, isLoading: isEngagementLoading, isError: isEngagementError, error: engagementError } = useUserEngagementAnalytics();
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -34,6 +47,27 @@ export default function MainUsersPage() {
         alert(`Download as ${type}`);
     };
 
+    if (isEngagementLoading || isUsersLoading) {
+        return (
+            <div className="bg-slate-50 font-sans min-h-screen flex items-center justify-center">
+                <div className="text-gray-600">Loading user analytics...</div>
+            </div>
+        );
+    }
+
+    if (isEngagementError || isUsersError) {
+        console.error("Error loading user analytics:", engagementError);
+        return (
+            <div className="bg-slate-50 font-sans min-h-screen flex items-center justify-center">
+                <div className="text-red-600">Error loading user data: {engagementError?.message || 'Please try again.'}</div>
+            </div>
+        );
+    }
+
+    const engagementMetrics = userEngagementData || {};
+    const avgEngagementLikes = parseFloat(engagementMetrics.averageEngagement?.avgLikesPerPost) || 0;
+    const avgEngagementComments = parseFloat(engagementMetrics.averageEngagement?.avgCommentsPerPost) || 0;
+
     return (
         <div className="bg-slate-50 font-sans">
             <div className="max-w-7xl mx-auto">
@@ -48,27 +82,31 @@ export default function MainUsersPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <Card
                             title="Total Users"
-                            value={totalCount}
+                            value={engagementMetrics.totalUsers ?? 0}
                             icon={<Users className="w-5 h-5" />}
-                            details={<span className="text-green-600">+12.5% from last month</span>}
+                            details={formatGrowthDetails(engagementMetrics.userGrowthRate)}
                         />
                         <Card
                             title="Active Users"
-                            value="0"
+                            value={engagementMetrics.activeUsers ?? 0}
                             icon={<UserCheck className="w-5 h-5" />}
-                            details={`0% of total users`}
+                            details={
+                                engagementMetrics.totalUsers > 0
+                                    ? `${((engagementMetrics.activeUsers / engagementMetrics.totalUsers) * 100).toFixed(1)}% of total users`
+                                    : "0% of total users"
+                            }
                         />
                         <Card
                             title="New This Month"
-                            value="234"
+                            value={engagementMetrics.newUsersThisMonth ?? 0}
                             icon={<UserPlus className="w-5 h-5" />}
-                            details={<span className="text-green-600">+18.2% from last month</span>}
+                            details={formatGrowthDetails(engagementMetrics.userGrowthRate)}
                         />
                         <Card
                             title="Avg. Engagement"
-                            value="72%"
+                            value={`${avgEngagementLikes.toFixed(1)} likes/post`}
                             icon={<BarChart2 className="w-5 h-5" />}
-                            details={<span className="text-red-600">-5.1% from last month</span>}
+                            details={`Avg. ${avgEngagementComments.toFixed(1)} comments/post`}
                         />
                     </div>
 
@@ -94,24 +132,15 @@ export default function MainUsersPage() {
                             </button>
                             {showDownloadMenu && (
                                 <div className="absolute right-0 mt-2 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                                    <button
-                                        onClick={() => handleDownload('xls')}
-                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                                    >
-                                        .xls
-                                    </button>
-                                    <button
-                                        onClick={() => handleDownload('pdf')}
-                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                                    >
-                                        .pdf
-                                    </button>
+                                    <button onClick={() => handleDownload('xls')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">.xls</button>
+                                    <button onClick={() => handleDownload('pdf')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">.pdf</button>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <UserAccounts search={debouncedSearchTerm} />
+                    {/* Renders all users by default (no role prop) */}
+                    <UserAccounts search={debouncedSearchTerm} /> 
                 </div>
             </div>
         </div>

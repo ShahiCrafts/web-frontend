@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MessageSquare, Heart, Share2, Bookmark, User, X } from 'lucide-react';
 import { useFetchPostById } from '../hooks/user/usePostTan';
 import { useComments } from '../hooks/user/useCommentTan';
-import { CommentThread } from '../components/public/comment/CommentThread'; // updated import (default export)
+import { useAuth } from '../context/AuthProvider'; // 👈 1. IMPORT useAuth
+import { CommentThread } from '../components/public/comment/CommentThread';
 import emptyStateImg from '../assets/empty_state.png';
 
 const LoadingSpinner = () => (
@@ -52,7 +53,7 @@ const DiscussionPostCard = ({ post }) => (
         <div className="flex items-center gap-5 text-gray-500 text-sm flex-wrap">
           <button className="flex items-center gap-1 hover:text-red-500 transition-colors">
             <Heart className="w-4 h-4" />
-            <span>24</span>
+            <span>{post?.likes?.length || 0}</span>
           </button>
           <button className="flex items-center gap-1 hover:text-blue-500 transition-colors">
             <MessageSquare className="w-4 h-4" />
@@ -72,6 +73,7 @@ const DiscussionPostCard = ({ post }) => (
 );
 
 export default function PostDetailModal({ postId, onClose }) {
+  const { user: currentUser } = useAuth(); // 👈 2. GET the current user
   const { data: post, isLoading: isPostLoading, isError } = useFetchPostById(postId);
   const { comments, isLoading: areCommentsLoading, createComment, toggleLike, deleteComment } = useComments(postId);
 
@@ -103,7 +105,7 @@ export default function PostDetailModal({ postId, onClose }) {
     if (!newComment.trim() || isSubmitting) return;
     setIsSubmitting(true);
     const parentId = replyingTo ? replyingTo._id : null;
-    await createComment(newComment.trim(), parentId);
+    createComment(newComment.trim(), parentId); // No need to await if it's a socket emit
     setNewComment('');
     setReplyingTo(null);
     setIsSubmitting(false);
@@ -147,7 +149,7 @@ export default function PostDetailModal({ postId, onClose }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
+        className="fixed inset-0 z-100 flex items-center justify-center bg-black/20"
         onClick={onClose}
       >
         <motion.div
@@ -161,26 +163,23 @@ export default function PostDetailModal({ postId, onClose }) {
         >
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-gray-500 cursor-pointer z-60 hover:text-gray-700 transition"
+            className="absolute top-3 right-3 text-gray-500 cursor-pointer z-50 hover:text-gray-700 transition"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Modal Header */}
-          <div className="px-6 pt-5 pb-3 shadow-sm z-20 flex justify-center">
+          <div className="px-6 pt-5 pb-3 border-b border-gray-200 z-20 flex justify-center">
             <h2 className="text-xl font-bold text-gray-900 truncate">
               "{post?.authorId?.fullName || 'Loading...'}'s Post"
             </h2>
-
           </div>
 
           {/* Scrollable Content */}
           <div
             ref={commentsContainerRef}
             className="flex-1 overflow-y-auto px-4 sm:px-6 space-y-6 py-4"
-          // optional: to reverse the scroll direction visually:
-          // style={{ display: 'flex', flexDirection: 'column-reverse' }}
           >
             {isPostLoading ? (
               <LoadingSpinner />
@@ -193,7 +192,6 @@ export default function PostDetailModal({ postId, onClose }) {
             ) : (
               <>
                 <DiscussionPostCard post={post} />
-
                 <div className="border-t border-t-gray-200 pt-4">
                   <h3 className="text-base font-semibold text-gray-900 mb-4">
                     Comments ({comments.filter(c => !c.isDeleted).length})
@@ -219,6 +217,7 @@ export default function PostDetailModal({ postId, onClose }) {
                               onLike={toggleLike}
                               onReply={handleSetReply}
                               onDelete={handleDelete}
+                              currentUser={currentUser} // 👈 3. PASS the user down as a prop
                             />
                           </motion.div>
                         ))}
@@ -233,8 +232,8 @@ export default function PostDetailModal({ postId, onClose }) {
           </div>
 
           {/* Comment Input */}
-          <div className="shadow-inner px-4 sm:px-6 py-4">
-            <div className="flex items-center gap-3">
+          <div className="border-t border-gray-200 bg-gray-50 px-4 sm:px-6 py-4">
+            <div className="flex items-start gap-3">
               <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-blue-500 text-white">
                 <User className="w-4 h-4" />
               </div>
@@ -242,7 +241,7 @@ export default function PostDetailModal({ postId, onClose }) {
               <div className="flex-1 relative">
                 {replyingTo && (
                   <div className="mb-1 flex items-center justify-between rounded-md bg-blue-50 px-2 py-1 text-xs">
-                    <span className="text-blue-700">Replying to @{replyingTo.authorName}</span>
+                    <span className="text-blue-700">Replying to @{replyingTo.author.fullName}</span>
                     <button onClick={() => setReplyingTo(null)} className="p-1 text-blue-700 hover:text-blue-900">
                       <X className="h-3 w-3" />
                     </button>
@@ -255,14 +254,14 @@ export default function PostDetailModal({ postId, onClose }) {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder={replyingTo ? 'Write a reply...' : 'Write a comment...'}
-                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-0 focus:border-gray-300 resize-none h-10"
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none h-10"
                     rows={1}
                     disabled={isSubmitting}
                   />
                   <button
                     onClick={handleCommentSubmit}
                     disabled={!newComment.trim() || isSubmitting}
-                    className="p-3 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition"
+                    className="p-3 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     aria-label={replyingTo ? 'Post reply' : 'Post comment'}
                   >
                     <Send className="w-4 h-4" />

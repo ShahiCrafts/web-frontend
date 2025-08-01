@@ -1,18 +1,16 @@
-// src/components/common/ReportPostModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Flag, X, Shield } from 'lucide-react'; // Ensure these icons are imported
-import clsx from 'clsx'; // For conditional class joining
-import toast from 'react-hot-toast'; // For toast messages
-import { useOnClickOutside } from '../../../hooks/user/useOnClickOutside'; // Assuming this hook's path
+import { X, Shield, AlertTriangle } from 'lucide-react';
+import clsx from 'clsx';
+import toast from 'react-hot-toast';
+import { useOnClickOutside } from '../../../hooks/user/useOnClickOutside';
 
 const REPORT_TYPES = [
-  { value: "spam", label: "Spam", icon: "🚫", description: "Repetitive or irrelevant content" },
-  { value: "offensive", label: "Offensive", icon: "⚠️", description: "Inappropriate or offensive material" },
-  { value: "misleading", label: "Misleading", icon: "❌", description: "False or misleading information" },
-  { value: "harassment", label: "Harassment", icon: "🛡️", description: "Bullying or harassment" },
-  { value: "hate", label: "Hate Speech", icon: "💢", description: "Content promoting hate or discrimination" },
-  { value: "illegal", label: "Illegal Content", icon: "🚨", description: "Content that violates laws" },
-  { value: "other", label: "Other", icon: "📝", description: "Other issues not listed above" }
+  { value: 'Spam', label: 'Spam', icon: '🚫' },
+  { value: 'Offensive', label: 'Offensive', icon: '⚠️' },
+  { value: 'Misleading', label: 'Misleading', icon: '❌' },
+  { value: 'Harassment', label: 'Harassment', icon: '🛡️' },
+  { value: 'Hate Speech', label: 'Hate Speech', icon: '💢' },
+  { value: 'Other', label: 'Other', icon: '📝' },
 ];
 
 export default function ReportPostModal({ isOpen, onClose, onSubmit }) {
@@ -21,29 +19,23 @@ export default function ReportPostModal({ isOpen, onClose, onSubmit }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const modalRef = useRef(null);
 
-  // Use the useOnClickOutside hook for closing the modal
   useOnClickOutside(modalRef, () => {
-    // Only close if not currently submitting
-    if (!isSubmitting) {
-      onClose();
-    }
+    if (!isSubmitting) onClose();
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!reportType) {
-      toast.error('Please select a report type.');
+      toast.error('Please select a reason.');
       return;
     }
     setIsSubmitting(true);
     try {
-      await onSubmit(reportType, reason); // onSubmit is a prop (e.g., reportPostMutation.mutate)
+      await onSubmit(reportType, reason);
       setReportType('');
       setReason('');
-      // onClose handled by onSubmit's success callback usually
     } catch (error) {
       console.error('Report submission failed:', error);
-      // toast.error is handled by usePostTan error callback in parent
     } finally {
       setIsSubmitting(false);
     }
@@ -57,59 +49,59 @@ export default function ReportPostModal({ isOpen, onClose, onSubmit }) {
     };
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden'; // Prevent scrolling body when modal is open
+      document.body.style.overflow = 'hidden';
     }
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset'; // Restore body scrolling
+      document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose, isSubmitting]);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-90 flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={!isSubmitting ? onClose : undefined} />
+
       <div
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-300"
+        className="relative bg-white rounded-2xl shadow-xl border w-full max-w-md mx-2 overflow-hidden animate-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-full">
-                <Flag className="w-5 h-5" />
-              </div>
-              <h2 className="text-xl font-bold">Report Post</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-red-50 rounded-xl border border-red-100">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
             </div>
-            <button
-              onClick={!isSubmitting ? onClose : undefined}
-              disabled={isSubmitting}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50"
-              aria-label="Close modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800">Report Content</h2>
+              <p className="text-xs text-gray-500">Reports are anonymous and help keep our community safe.</p>
+            </div>
           </div>
-          <p className="text-white/90 text-sm mt-2">
-            Help us keep the community safe by reporting inappropriate content.
-          </p>
+          <button
+            onClick={!isSubmitting ? onClose : undefined}
+            disabled={isSubmitting}
+            className="p-1.5 hover:bg-gray-100 rounded-full disabled:opacity-50"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Select Report Type:
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-4 py-5 space-y-4 text-sm">
+          {/* Report Types */}
+          <div>
+            <label className="block font-medium text-gray-800 mb-2">What's the issue?</label>
+            {/* --- MODIFIED LINE --- */}
+            <div className="grid grid-cols-3 gap-3">
               {REPORT_TYPES.map((type) => (
                 <label
                   key={type.value}
                   className={clsx(
-                    "flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200",
-                    "focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500",
+                    "p-2.5 border rounded-xl text-center text-xs flex flex-col items-center justify-center gap-1 cursor-pointer transition-all",
                     reportType === type.value
-                      ? 'border-orange-500 bg-orange-50 shadow-sm'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   )}
                 >
@@ -121,59 +113,59 @@ export default function ReportPostModal({ isOpen, onClose, onSubmit }) {
                     onChange={(e) => setReportType(e.target.value)}
                     className="sr-only"
                   />
-                  <div className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
-                    {reportType === type.value && (
-                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{type.icon} {type.label}</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{type.description}</p>
-                  </div>
+                  <span className="text-xl">{type.icon}</span>
+                  <span className="font-medium text-gray-700">{type.label}</span>
                 </label>
               ))}
             </div>
           </div>
+
+          {/* Reason */}
           <div>
-            <label htmlFor="reason" className="block text-sm font-semibold text-gray-900 mb-3">
-              Additional Details <span className="text-gray-500 font-normal">(Optional)</span>
+            <label htmlFor="reason" className="block font-medium text-gray-800 mb-1">
+              Additional Details <span className="text-gray-400 text-xs">(optional)</span>
             </label>
             <textarea
               id="reason"
-              rows="4"
-              className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-orange-500 focus:ring-0 resize-none transition-colors placeholder:text-gray-400"
-              placeholder="Help us understand the issue better..."
+              rows="2"
+              maxLength={500}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
               disabled={isSubmitting}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Add helpful context..."
+              className="w-full p-2.5 border border-gray-200 rounded-xl resize-none focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 text-sm bg-gray-50"
             />
+            <div className="text-right text-xs text-gray-400 mt-1">{reason.length} / 500</div>
           </div>
+
           {/* Actions */}
-          <div className="flex gap-3 pt-6">
+          <div className="flex gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all text-sm disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!reportType || isSubmitting}
-              className="flex-1 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-orange-500 rounded-xl hover:from-red-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className={clsx(
+                "flex-1 px-4 py-2 text-white font-medium rounded-xl transition-all text-sm flex items-center justify-center gap-1.5",
+                "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Submitting...
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Submitting
                 </>
               ) : (
                 <>
                   <Shield className="w-4 h-4" />
-                  Submit Report
+                  Submit
                 </>
               )}
             </button>

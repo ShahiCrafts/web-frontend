@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import AllDiscussions from "./AllDiscussions";
-import DiscussionModeration from "./DiscussionModeration";
-import PinnedDiscussions from "./PinnedDiscussions";
 import { Flag, List, Pin } from 'lucide-react';
+import AllDiscussions from "./AllDiscussions"; // This component will now handle all data fetching
+import PinnedDiscussions from "./PinnedDiscussions";
+import DiscussionModeration from "./DiscussionModeration";
 
 const Tab = ({ label, count, icon, isActive, onClick }) => {
     const badgeClassName = `ml-2 px-2 py-0.5 text-xs rounded-full font-bold text-white`;
@@ -32,20 +32,20 @@ const Tab = ({ label, count, icon, isActive, onClick }) => {
 export default function MainDiscussionPage() {
     const [activeTab, setActiveTab] = useState('all');
 
+    // The AllDiscussions component will now handle all data fetching and filtering
+    // and can pass back counts via a callback if needed. For now, we'll keep the counts static
+    // or you can implement a separate hook to fetch these specific counts.
+    const pinnedCount = 2; // Static for now, replace with a fetched value
+    const moderationCount = 2; // Static for now, replace with a fetched value
+
+    // The renderContent logic is simplified
     const renderContent = () => {
-        switch (activeTab) {
-            case 'pinned':
-                return <PinnedDiscussions />;
-            case 'moderation':
-                return <DiscussionModeration />;
-            case 'all':
-            default:
-                return <AllDiscussions />;
-        }
+        // Pass the activeTab as a prop so the AllDiscussions component knows how to filter
+        return <AllDiscussions activeTab={activeTab} />;
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-5 sm:p-6">
+        <div className="bg-white rounded-xl p-3 sm:p-4">
             <header className="mb-6 pb-4 border-b border-gray-200">
                 <h1 className="text-xl font-bold text-gray-900">Discussion Management</h1>
                 <p className="text-sm text-gray-600 mt-1">
@@ -55,8 +55,8 @@ export default function MainDiscussionPage() {
 
             <nav className="flex items-center space-x-2 mb-6">
                 <Tab label="All Discussions" icon={<List className="w-4 h-4" />} isActive={activeTab === 'all'} onClick={() => setActiveTab('all')} />
-                <Tab label="Pinned" count={2} icon={<Pin className="w-4 h-4" />} isActive={activeTab === 'pinned'} onClick={() => setActiveTab('pinned')} />
-                <Tab label="Moderation" count={2} icon={<Flag className="w-4 h-4" />} isActive={activeTab === 'moderation'} onClick={() => setActiveTab('moderation')} />
+                <Tab label="Pinned" count={pinnedCount} icon={<Pin className="w-4 h-4" />} isActive={activeTab === 'pinned'} onClick={() => setActiveTab('pinned')} />
+                <Tab label="Moderation" count={moderationCount} icon={<Flag className="w-4 h-4" />} isActive={activeTab === 'moderation'} onClick={() => setActiveTab('moderation')} />
             </nav>
 
             <main>

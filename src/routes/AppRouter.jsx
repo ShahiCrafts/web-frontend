@@ -1,4 +1,3 @@
-// src/router/AppRouter.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
@@ -31,6 +30,8 @@ import SarahChenProfile from "../pages/ExplorePage";
 import ExploreCommunities from "../pages/ExploreCommunities";
 import CommunityApprovalDashboard from "../components/admin/CommunityManagement";
 import ManageCommunities from "../pages/ManageCommunities";
+import PopularPage from "../pages/PopularPage";
+import MainCitizensPage from "../components/admin/users/MainCitizensPage";
 
 const AppRouter = () => {
   return (
@@ -57,7 +58,8 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="/admin/overview" replace />} />
           <Route path="overview" element={<DashboardPage />} />
-          <Route path="users/*" element={<MainUsersPage />} />
+          <Route path="users" element={<MainUsersPage />} />
+          <Route path="users/citizens" element={<MainCitizensPage />} />
           <Route path="issues" element={<IssueManagementPage />} />
           <Route path="flags" element={<MainContentPage />} />
           <Route path="notifications" element={<MainNotificationPage />} />
@@ -82,6 +84,7 @@ const AppRouter = () => {
         >
           <Route index element={<Navigate to="/citizen/home" replace />} />
           <Route path="home" element={<MainHomePage />} />
+          <Route path="popular" element={<PopularPage />} />
           <Route path="post/options/:postId" element={<PostDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/:userId" element={<SarahChenProfile />} />

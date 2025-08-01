@@ -22,9 +22,9 @@ export default function PublicLayout({ children }) {
             {/* Fixed Sidebar (outside flex layout) */}
             <PublicSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-            {/* Main content wrapper with left margin to offset sidebar */}
+            {/* Main content wrapper with left margin to offset sidebar and padding-top for header */}
             <main
-                className="pl-68 h-[calc(100vh-60px)] overflow-y-auto px-3 py-3"
+                className="lg:pl-68 h-screen overflow-y-auto px-3 py-3"
             >
                 {showCreatePost ? <CreatePostPage onClose={handleCloseCreatePost} /> : <Outlet />}
             </main>

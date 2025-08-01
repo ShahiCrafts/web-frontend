@@ -48,7 +48,7 @@ export default function App() {
     return (
         <div className="bg-slate-50 font-sans">
             <div className="w-full max-w-7xl mx-auto">
-                <div className="bg-white rounded-xl shadow-lg p-5 sm:p-6">
+                <div className="bg-white rounded-xl p-5 sm:p-6">
                     <header className="mb-6 pb-4 border-b border-gray-200">
                         <h1 className="text-xl font-bold text-gray-900">Notification Management</h1>
                         <p className="text-sm text-gray-600 mt-1">

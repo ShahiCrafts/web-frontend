@@ -7,20 +7,24 @@ export const CommentItem = ({ comment, allComments, onLike, onReply, onDelete })
 
   const userId = user?._id || user?.id;
   const isLikedByMe = comment.likes.includes(userId);
-  const isAuthor = comment.authorId === userId || comment.authorId?._id === userId;
+  
+  // 👇 CORRECTED THIS LINE
+  const isAuthor = comment.author?._id === userId;
 
   const parentComment = comment.parentId
     ? allComments.find(c => c._id === comment.parentId)
     : null;
 
-  // Return nothing if comment is deleted
-  if (comment.isDeleted) return null;
+  // You can show a placeholder for deleted comments if you want them to keep their space
+  if (comment.isDeleted) {
+    return <div className="text-sm italic text-gray-400 pl-11">This comment was deleted.</div>;
+  }
 
   return (
     <div className="flex items-start gap-3 relative group">
       <div className="relative">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-medium text-white z-10">
-          {comment.authorName?.charAt(0) || 'A'}
+          {comment.author?.fullName?.charAt(0) || 'A'}
         </div>
 
         {parentComment && (
@@ -49,14 +53,14 @@ export const CommentItem = ({ comment, allComments, onLike, onReply, onDelete })
           {parentComment && !parentComment.isDeleted && (
             <div className="p-2 mb-2 text-xs text-gray-600 bg-gray-100 border border-gray-200 rounded-lg">
               <span className="font-semibold text-gray-800">
-                Replying to @{parentComment.authorName}:
+                Replying to @{parentComment.author?.fullName}:
               </span>
               <p className="mt-1 italic truncate">"{parentComment.content}"</p>
             </div>
           )}
 
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-800">{comment.authorName}</span>
+            <span className="font-medium text-gray-800">{comment.author?.fullName}</span>
             <time className="text-xs text-gray-400">
               {new Date(comment.createdAt).toLocaleString()}
             </time>
@@ -76,7 +80,6 @@ export const CommentItem = ({ comment, allComments, onLike, onReply, onDelete })
               <Heart
                 className="h-4 w-4"
                 fill={isLikedByMe ? 'currentColor' : 'none'}
-                stroke={isLikedByMe ? 'none' : 'currentColor'}
               />
               <span>{comment.likes.length}</span>
             </button>

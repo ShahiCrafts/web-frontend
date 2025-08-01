@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { socket } from '../services/socket'; // Assuming this imports the already configured socket instance
+import { socket } from '../services/socket';
 import { useAuth } from './AuthProvider';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -12,12 +12,14 @@ export const SocketProvider = ({ children }) => {
     const queryClient = useQueryClient();
     const listenersAttachedRef = useRef(false);
 
-    // --- General Socket Handlers ---
+    // --- General Socket Handlers (Unchanged) ---
+    // These handlers are kept as they were, they correctly manage state/queries.
     const handleConnect = useCallback(() => {
         console.log('Socket Connected, ID:', socket.id);
         if (user?.id) {
-            socket.emit('user:online', user.id);
-            socket.emit('joinGlobalFeedRoom');
+            // NOTE: 'user:online' event will now be emitted by a new, more reliable useEffect
+            // socket.emit('user:online', user.id); 
+            console.log('The "connect" event fired, but room joining is now handled by a separate useEffect.');
         }
     }, [user]);
 
@@ -38,15 +40,14 @@ export const SocketProvider = ({ children }) => {
         console.error('Socket error:', data);
         toast.error(`Socket Error: ${data.error || data.message || 'An unknown error occurred.'}`);
     }, []);
-
-    // ✅ MISSING HANDLER ADDED HERE
+    
     const handleNewNotification = useCallback((data) => {
         console.log('New notification received:', data);
         toast(data.message || '🔔 New notification received!');
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }, [queryClient]);
 
-    // --- Real-time Handlers ---
+    // --- Real-time Handlers (Unchanged) ---
     const handleNotificationCountUpdate = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['notificationCounts'] });
     }, [queryClient]);
@@ -152,31 +153,48 @@ export const SocketProvider = ({ children }) => {
         queryClient.invalidateQueries({ queryKey: ['followingStatus', data.targetUserId] });
     }, [queryClient]);
 
-    // --- Connection Logic ---
+    // --- REFACTORED CONNECTION LOGIC ---
+    // This is the new, more reliable useEffect hook.
     useEffect(() => {
         const token = localStorage.getItem('token');
 
         if (user) {
+            // Check if the user's token has changed or if the socket is disconnected.
             if (socket.auth?.token !== token || !socket.connected) {
+                console.log('User authenticated, but token changed or socket disconnected. Reconnecting...');
                 socket.auth = { token };
-                if (socket.connected) {
-                    socket.disconnect();
-                    setTimeout(() => socket.connect(), 50);
-                } else {
-                    socket.connect();
-                }
+                socket.disconnect(); // Ensure a clean state before reconnecting
+                socket.connect();
             }
+
+            // This block is now separate and handles joining the rooms.
+            // It runs reliably every time the user state or socket connection changes.
+            console.log('User and socket ready. Emitting join events.');
+            socket.emit('user:online', user.id);
+            socket.emit('joinGlobalFeedRoom');
+            
         } else {
+            // If no user, disconnect the socket.
             if (socket.connected) {
+                console.log('User logged out. Disconnecting socket.');
                 socket.emit('leaveGlobalFeedRoom');
                 socket.disconnect();
                 setOnlineUsers([]);
             }
-            socket.auth = {};
         }
-    }, [user]);
 
-    // --- Attach Listeners ---
+        // Cleanup function: Leave room and disconnect on component unmount
+        return () => {
+            if (socket.connected) {
+                console.log('SocketProvider unmounting or user logging out. Leaving global feed room.');
+                socket.emit('leaveGlobalFeedRoom');
+                socket.disconnect();
+            }
+        };
+    }, [user]); // The dependency is just the 'user' object from AuthProvider
+
+    // --- Attach Listeners (Unchanged) ---
+    // This part is fine as it is. It attaches the handlers just once.
     useEffect(() => {
         if (!listenersAttachedRef.current) {
             socket.on('connect', handleConnect);
@@ -200,7 +218,7 @@ export const SocketProvider = ({ children }) => {
             socket.on('postUpdated', handlePostUpdated);
             socket.on('postDeleted', handlePostDeleted);
             socket.on('postReported', handlePostReported);
-            socket.on('newNotification', handleNewNotification); // ✅ fixed
+            socket.on('newNotification', handleNewNotification);
             socket.on('pollVoteUpdated', handlePollVoteUpdated);
             socket.on('user:newFollower', handleUserNewFollower);
             socket.on('user:unfollowed', handleUserUnfollowed);
@@ -216,7 +234,7 @@ export const SocketProvider = ({ children }) => {
                 socket.off('disconnect', handleDisconnect);
                 socket.off('connect_error', handleConnectError);
                 socket.off('errorMessage', handleErrorMessage);
-
+                
                 socket.off('notification:count:update', handleNotificationCountUpdate);
                 socket.off('community:approved', handleCommunityApproved);
                 socket.off('community:rejected', handleCommunityRejected);
@@ -232,7 +250,7 @@ export const SocketProvider = ({ children }) => {
                 socket.off('postUpdated', handlePostUpdated);
                 socket.off('postDeleted', handlePostDeleted);
                 socket.off('postReported', handlePostReported);
-                socket.off('newNotification', handleNewNotification); // ✅ fixed
+                socket.off('newNotification', handleNewNotification);
                 socket.off('pollVoteUpdated', handlePollVoteUpdated);
                 socket.off('user:newFollower', handleUserNewFollower);
                 socket.off('user:unfollowed', handleUserUnfollowed);

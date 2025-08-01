@@ -6,13 +6,14 @@ export const CommentThread = ({
   comment,
   allComments,
   repliesByParentId,
+  currentUser, // 👈 1. Accept currentUser as a prop
   hiddenCommentIds = [],
   onHideComment,
   ...props
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Skip rendering if this comment is hidden (e.g. deleted & expired)
+  // Skip rendering if this comment is hidden
   if (hiddenCommentIds.includes(comment._id)) return null;
 
   const directReplies = repliesByParentId[comment._id] || [];
@@ -28,6 +29,7 @@ export const CommentThread = ({
         comment={comment}
         allComments={allComments}
         onHide={onHideComment}
+        currentUser={currentUser} // 👈 2. Pass currentUser to CommentItem
         {...props}
       />
 
@@ -41,26 +43,30 @@ export const CommentThread = ({
               repliesByParentId={repliesByParentId}
               hiddenCommentIds={hiddenCommentIds}
               onHideComment={onHideComment}
+              currentUser={currentUser} // 👈 3. Pass currentUser to nested threads
               {...props}
             />
           ))}
 
-          {totalReplies > 1 && (
+          {totalReplies > 1 && !isExpanded && (
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => setIsExpanded(true)}
               className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
             >
-              {isExpanded ? (
-                <>
-                  <ChevronUp size={16} />
-                  Hide replies
-                </>
-              ) : (
-                <>
-                  <MessageSquare size={16} />
-                  Show more replies
-                </>
-              )}
+              <MessageSquare size={16} />
+              <span>
+                Show {totalReplies - 1} more repl{totalReplies - 1 > 1 ? 'ies' : 'y'}
+              </span>
+            </button>
+          )}
+
+          {isExpanded && (
+             <button
+              onClick={() => setIsExpanded(false)}
+              className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
+            >
+              <ChevronUp size={16} />
+              Hide replies
             </button>
           )}
         </div>

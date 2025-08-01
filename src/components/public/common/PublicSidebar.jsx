@@ -10,9 +10,9 @@ import {
     ChevronDown,
 } from "lucide-react";
 
-// Assuming your header height is 60px or similar for 'top-15'
-// If your header is a different fixed height, adjust this value
-const NAVBAR_HEIGHT_PX = 0; // Or whatever 'top-15' translates to in your Tailwind config
+// Define the header height consistently
+// **IMPORTANT**: Adjust this value if your PublicHeader's actual height changes
+const HEADER_HEIGHT_PX = 69; // Based on your header's current styling.
 
 const isPathActive = (pathname, path, subItems = []) => {
     if (!path) return false;
@@ -106,7 +106,7 @@ function SidebarDropdown({ item, active, onClick }) {
                         >
                             <SidebarItem
                                 item={subItem}
-                                active={isPathActive(location.pathname, subItem.path)} // Use isPathActive for sub-items too
+                                active={isPathActive(location.pathname, subItem.path)}
                                 isSubItem={true}
                                 onClick={onClick}
                             />
@@ -125,7 +125,7 @@ export default function PublicSidebar({ sidebarOpen, setSidebarOpen }) {
         {
             type: 'group', items: [
                 { icon: <Home size={18} />, label: "Home", path: "/citizen/home" },
-                { icon: <TrendingUp size={18} />, label: "Popular", path: "/popular" },
+                { icon: <TrendingUp size={18} />, label: "Popular", path: "/citizen/popular" },
                 { icon: <Compass size={18} />, label: "Explore", path: "/citizen/explore" },
                 { icon: <Globe size={18} />, label: "All", path: "/all" },
             ]
@@ -141,14 +141,6 @@ export default function PublicSidebar({ sidebarOpen, setSidebarOpen }) {
             type: 'group', items: [
                 { icon: <Plus size={18} />, label: "Create a community", path: "/create-community" },
                 { icon: <Settings size={18} />, label: "Manage communities", path: "/citizen/manage" },
-                // Example of a dropdown item (if you later want to group communities under a "My Communities" dropdown)
-                // {
-                //     icon: <Globe size={18} />, label: "My Communities",
-                //     subItems: [
-                //         { label: "r/CityPlanning", path: "/r/CityPlanning" },
-                //         { label: "r/Environment", path: "/r/Environment" }
-                //     ]
-                // },
                 {
                     icon: <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-400 shadow-sm" />,
                     label: "r/CityPlanning",
@@ -167,25 +159,26 @@ export default function PublicSidebar({ sidebarOpen, setSidebarOpen }) {
 
     return (
         <>
+            {/* Sidebar Overlay: Fixed, starts below the header, and has a Z-index LOWER than the header */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-sm lg:hidden transition-all duration-300"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm lg:hidden transition-all duration-300 z-49" // z-index 49 (LOWER than header's z-50)
+                    style={{ top: `${HEADER_HEIGHT_PX}px` }} // Starts below the header
                     aria-hidden="true"
                     onClick={closeSidebar}
                 />
             )}
 
+            {/* Sidebar itself: Fixed, starts below the header, takes remaining height, same z-index as header */}
             <aside className={`
-    fixed top-[80px] left-0
-    w-64 h-[calc(100vh-60px)]
-    bg-white border-r border-slate-200/60
-    z-40 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent
-    transition-transform duration-500 ease-out
-    ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-`}>
-                {/* A blank div the height of your header to push content down for fixed headers on desktop */}
-                {/* On mobile, this won't matter as much because the entire sidebar slides out */}
-                <div className="hidden lg:block" style={{ height: `${NAVBAR_HEIGHT_PX}px` }}></div>
+                fixed top-[${HEADER_HEIGHT_PX}px] left-0 // Starts exactly below the header
+                w-64 h-screen // Takes the remaining viewport height
+                bg-white border-r border-slate-200/60
+                z-50 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent // Same z-index as header, so it doesn't overlap header elements
+                transition-transform duration-500 ease-out
+                ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+            `}>
+                {/* No internal header offset div needed here, as the 'top' positioning already handles it. */}
 
                 <nav className="flex-grow pt-4 pb-6 px-0 overflow-y-auto relative z-10 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent space-y-1">
                     {navItems.map((section, index) => {

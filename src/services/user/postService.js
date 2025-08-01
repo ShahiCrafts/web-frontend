@@ -5,16 +5,30 @@ import {
   updatePost,
   deletePost,
   reportPost,
-  castVote, // <-- Import the new API function
-  getPollStats, // <-- Import the optional new API function
-} from '../../api/user/postApi';
+  castVote,
+  likePost, // <--- Import the new API function
+  dislikePost,
+  fetchPopularPosts, // <--- Import the new API function
+  toggleEventInterest,
+  toggleEventRSVP
+} from "../../api/user/postApi";
 
 export const fetchPostsService = async (params = {}) => {
   try {
     const response = await fetchPosts(params);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to fetch posts' };
+    throw err.response?.data || { message: "Failed to fetch posts" };
+  }
+};
+
+export const fetchAllPopularPostsService = async ({ pageParam = 1 }) => {
+  try {
+    const response = await fetchPopularPosts(pageParam);
+    console.log(response.data);
+    return response.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to fetch posts" };
   }
 };
 
@@ -23,7 +37,7 @@ export const getPostService = async (id) => {
     const response = await getPost(id);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to get post' };
+    throw err.response?.data || { message: "Failed to get post" };
   }
 };
 
@@ -32,7 +46,7 @@ export const createPostService = async (postData) => {
     const response = await createPost(postData);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to create post' };
+    throw err.response?.data || { message: "Failed to create post" };
   }
 };
 
@@ -41,7 +55,7 @@ export const updatePostService = async (id, updateData) => {
     const response = await updatePost(id, updateData);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to update post' };
+    throw err.response?.data || { message: "Failed to update post" };
   }
 };
 
@@ -50,7 +64,7 @@ export const deletePostService = async (id) => {
     const response = await deletePost(id);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to delete post' };
+    throw err.response?.data || { message: "Failed to delete post" };
   }
 };
 
@@ -59,27 +73,51 @@ export const reportPostService = async (id, reason, type) => {
     const response = await reportPost(id, reason, type);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to report post' };
+    throw err.response?.data || { message: "Failed to report post" };
   }
 };
 
-// --- NEW SERVICE FUNCTION FOR POLL VOTING ---
-export const castVoteService = async (pollId, optionLabel) => {
+export const likePostService = async (postId) => {
   try {
-    const response = await castVote(pollId, optionLabel);
+    const response = await likePost(postId);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to cast vote' };
+    throw err.response?.data || { message: "Failed to like post" };
   }
 };
 
-// --- OPTIONAL: NEW SERVICE FUNCTION FOR GETTING POLL STATS ---
-// (Only needed if you use getPollStats API endpoint separately from getPost)
-export const getPollStatsService = async (pollId) => {
+export const dislikePostService = async (postId) => {
   try {
-    const response = await getPollStats(pollId);
+    const response = await dislikePost(postId);
     return response.data;
   } catch (err) {
-    throw err.response?.data || { message: 'Failed to fetch poll statistics' };
+    throw err.response?.data || { message: "Failed to dislike post" };
+  }
+};
+
+export const toggleEventInterestService = async (eventId) => {
+  try {
+    const response = await toggleEventInterest(eventId);
+    return response.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to toggle event interest" };
+  }
+};
+
+export const toggleEventRSVPService = async (eventId) => {
+  try {
+    const response = await toggleEventRSVP(eventId);
+    return response.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to toggle event RSVP" };
+  }
+};
+
+export const castVoteService = async (postId, optionIndex) => {
+  try {
+    const response = await castVote(postId, optionIndex);
+    return response.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to cast vote" };
   }
 };

@@ -3,7 +3,7 @@ import {
   fetchNotificationCounts,
   markNotificationsAsRead,
   deleteNotifications,
-} from '../../api/admin/notificationApi'; // Import the API functions
+} from "../../api/admin/notificationApi"; // Import the API functions
 
 /**
  * Service to fetch a paginated list of notifications for the current user.
@@ -17,7 +17,7 @@ const fetchNotificationsService = async (params = {}) => {
     return response.data;
   } catch (err) {
     console.error("fetchNotificationsService error:", err.response || err);
-    throw err.response?.data || { message: 'Failed to fetch notifications.' };
+    throw err.response?.data || { message: "Failed to fetch notifications." };
   }
 };
 
@@ -32,7 +32,9 @@ const fetchNotificationCountsService = async () => {
     return response.data;
   } catch (err) {
     console.error("fetchNotificationCountsService error:", err.response || err);
-    throw err.response?.data || { message: 'Failed to fetch notification counts.' };
+    throw (
+      err.response?.data || { message: "Failed to fetch notification counts." }
+    );
   }
 };
 
@@ -48,7 +50,9 @@ const markNotificationsAsReadService = async (notificationIds) => {
     return response.data;
   } catch (err) {
     console.error("markNotificationsAsReadService error:", err.response || err);
-    throw err.response?.data || { message: 'Failed to mark notifications as read.' };
+    throw (
+      err.response?.data || { message: "Failed to mark notifications as read." }
+    );
   }
 };
 
@@ -64,14 +68,13 @@ const deleteNotificationsService = async (notificationIds) => {
     return response.data;
   } catch (err) {
     console.error("deleteNotificationsService error:", err.response || err);
-    throw err.response?.data || { message: 'Failed to delete notifications.' };
+    throw err.response?.data || { message: "Failed to delete notifications." };
   }
 };
-
 // Export all notification services in a single object
 export const notificationService = {
   fetch: fetchNotificationsService,
   fetchCounts: fetchNotificationCountsService,
   markAsRead: markNotificationsAsReadService,
-  delete: deleteNotificationsService,
+  delete: deleteNotificationsService
 };
